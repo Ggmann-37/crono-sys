@@ -47,3 +47,45 @@
     }
   ],
   "screenshots": [
+    {
+      "src": "assets/screenshot-desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Vista semanal interactiva de Crono-SYS en escritorio"
+    },
+    {
+      "src": "assets/screenshot-mobile.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Vista adaptada para dispositivos móviles"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Subir Horario Excel",
+      "short_name": "Subir Excel",
+      "description": "Cargar archivo Excel para analizar horario",
+      "url": "./index.html?action=upload",
+      "icons": [
+        {
+          "src": "assets/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Añadir Tarea",
+      "short_name": "Nueva Tarea",
+      "description": "Programar nuevo tiempo de estudio o tarea",
+      "url": "./index.html?action=new-task",
+      "icons": [
+        {
+          "src": "assets/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}
