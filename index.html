@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crono-SYS</title>
+
+  <!-- PWA Primary Meta Tags -->
+  <meta name="description" content="Planificador inteligente de horarios y análisis de archivos Excel con descansos automáticos.">
+  <meta name="theme-color" content="#0284c7">
+  <meta name="color-scheme" content="light">
+
+  <!-- Web App Manifest (PWABuilder) -->
+  <link rel="manifest" href="manifest.json">
+
+  <!-- Apple Touch & iOS PWA Support -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Crono-SYS">
+  <link rel="apple-touch-icon" href="assets/icon-192.png">
+
+  <!-- Windows Tiles -->
+  <meta name="msapplication-TileColor" content="#0284c7">
+  <meta name="msapplication-TileImage" content="assets/icon-512.png">
+
+  <!-- Favicon Oficial Crono-SYS -->
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+
+  <!-- Hoja de estilos moderna y minimalista -->
+  <link rel="stylesheet" href="css/styles.css">
+
+  <!-- SheetJS CDN (Requerimiento explícito) -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+
+  <!-- Supabase JS Client v2 CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <!-- ==============================================================
+       1. FASE PREVIA: LANDING HERO (ESTILO OUTLOOK / CAPTURA 1)
+       ============================================================== -->
+  <div id="viewLanding" class="view-section landing-page">
+    
+    <!-- Barra de Navegación de la Landing -->
+    <nav class="landing-nav">
+      <div class="landing-nav-container">
+        <a href="#" class="brand-section" id="landingLogoLink">
+          <img src="assets/logo.svg" alt="Crono-SYS Logo" class="brand-logo-img">
+          <div class="brand-title-wrap">
+            <div class="brand-name">Crono-SYS</div>
+          </div>
+        </a>
+
+        <div class="landing-nav-actions">
+          <button class="btn btn-secondary" id="btnNavLogin">Iniciar sesión</button>
+          <button class="btn btn-primary" id="btnNavSignup">Empezar gratis</button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Contenido Hero Principal (Captura 1) -->
+    <header class="landing-hero">
+      
+      <!-- Lado Izquierdo: Textos y Botones de Acción -->
+      <div class="hero-left">
+        <h1 class="hero-headline">
+          Tu horario semanal,<br>
+          perfectamente organizado.<br>
+          Tu tiempo, perfectamente<br>
+          planificado.
+        </h1>
+
+        <p class="hero-description">
+          Transforma tus archivos Excel en un horario interactivo. Añade sesiones de estudio, descansos inteligentes y tareas en un solo lugar. Disponible para escritorio, móvil y web.
+        </p>
+
+        <div class="hero-actions-group">
+          <div class="hero-buttons-row">
+            <button class="btn-hero-primary" id="btnHeroLogin">Iniciar sesión</button>
+            <button class="btn-hero-preview" id="btnHeroPreview">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polygon points="10 8 16 12 10 16 10 8"></polygon>
+              </svg>
+              Probar gratis
+            </button>
+          </div>
+
+          <a class="hero-link-create" id="btnHeroSignup">
+            <span class="chevron-box">&gt;</span>
+            <span>Crear cuenta gratuita</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Lado Derecho: Mockup Visual Moderno estilo Outlook / Teams -->
+      <div class="hero-right">
+        <div class="mockup-podium-base">
+          
+          <!-- Ventana Aplicación Calendario -->
+          <div class="mockup-desktop-card">
+            <div class="mockup-window-header">
+              <div class="mockup-window-dots">
+                <span class="mockup-dot red"></span>
+                <span class="mockup-dot yellow"></span>
+                <span class="mockup-dot green"></span>
+              </div>
+              <div class="mockup-window-search">🔍 Crono-SYS Semanal</div>
+              <div style="font-size: 0.7rem; color: #64748b; font-weight: 700;">Noviembre 2026</div>
+            </div>
+
+            <div class="mockup-calendar-mini-grid">
+              <div class="mini-time-label"></div>
+              <div class="mini-day-header">LUN</div>
+              <div class="mini-day-header">MAR</div>
+              <div class="mini-day-header">MIÉ</div>
+              <div class="mini-day-header">JUE</div>
+              <div class="mini-day-header">VIE</div>
+
+              <!-- 09:00 -->
+              <div class="mini-time-label">09:00</div>
+              <div class="mini-chip base">🏢 Trabajo</div>
+              <div class="mini-chip base">🏢 Trabajo</div>
+              <div class="mini-chip base">🏢 Trabajo</div>
+              <div class="mini-chip base">🏢 Trabajo</div>
+              <div class="mini-chip base">🏢 Trabajo</div>
+
+              <!-- 11:00 -->
+              <div class="mini-time-label">11:00</div>
+              <div class="mini-chip study">📚 Estudio Mat.</div>
+              <div class="mini-chip study">📚 Programación</div>
+              <div class="mini-chip study">📚 Estudio Mat.</div>
+              <div class="mini-chip study">📚 Programación</div>
+              <div class="mini-chip study">📚 Repaso Final</div>
+
+              <!-- 12:00 -->
+              <div class="mini-time-label">12:00</div>
+              <div class="mini-chip break">☕ Pausa 15m</div>
+              <div class="mini-chip break">☕ Pausa 15m</div>
+              <div class="mini-chip break">☕ Pausa 15m</div>
+              <div class="mini-chip break">☕ Pausa 15m</div>
+              <div class="mini-chip break">☕ Pausa 15m</div>
+            </div>
+          </div>
+
+          <!-- Móvil Flotante en Perspectiva -->
+          <div class="mockup-mobile-card">
+            <div class="mockup-mobile-header">
+              <span>📅 Hoy</span>
+              <span style="color: #38bdf8;">Teams View</span>
+            </div>
+            <div class="mockup-mobile-item">
+              <span>09:00 Trabajo Base</span>
+              <span style="color: #4ade80;">✓</span>
+            </div>
+            <div class="mockup-mobile-item">
+              <span>11:00 Estudio Física</span>
+              <span style="color: #38bdf8;">●</span>
+            </div>
+            <div class="mockup-mobile-item">
+              <span>12:00 Descanso 15m</span>
+              <span style="color: #fbbf24;">☕</span>
+            </div>
+          </div>
+
+          <!-- Píldora Flotante -->
+          <div class="mockup-floating-badge">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#0284c7" stroke-width="2">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+            <span>Horario optimizado con descansos</span>
+          </div>
+
+        </div>
+      </div>
+
+    </header>
+
+  </div>
+
+
+  <!-- ==============================================================
+       2. PANEL DE LOGIN / SIGNUP DIVIDIDO (ESTILO GITHUB / CAPTURA 2)
+       ============================================================== -->
+  <div id="viewAuth" class="view-section view-hidden">
+    <div class="auth-split-wrapper">
+      
+      <!-- Lado Izquierdo (Oscuro con Branding y Características) -->
+      <div class="auth-split-left">
+        <a href="#" class="auth-left-brand" id="authBrandHomeLink">
+          <img src="assets/logo.svg" alt="Crono-SYS Logo">
+          <span>Crono-SYS</span>
+        </a>
+
+        <div class="auth-left-content">
+          <h2 class="auth-left-title" id="authLeftHeadline">Crea tu cuenta gratuita</h2>
+          <p class="auth-left-subtitle">
+            Descubre el poder de organizar tus semanas sin estrés con análisis de Excel y planificación inteligente.
+          </p>
+
+          <div class="auth-checklist">
+            <div class="auth-check-item">
+              <div class="auth-check-icon">✓</div>
+              <div class="auth-check-text">
+                <span class="auth-check-title">Análisis de archivos Excel</span>
+                <span class="auth-check-desc">Carga tu horario semanal en formato .xlsx o .xls con SheetJS al instante.</span>
+              </div>
+            </div>
+
+            <div class="auth-check-item">
+              <div class="auth-check-icon">✓</div>
+              <div class="auth-check-text">
+                <span class="auth-check-title">Planificador inteligente de estudio</span>
+                <span class="auth-check-desc">Divide materias en sesiones manejables respetando tus días y franjas.</span>
+              </div>
+            </div>
+
+            <div class="auth-check-item">
+              <div class="auth-check-icon">✓</div>
+              <div class="auth-check-text">
+                <span class="auth-check-title">Descansos automáticos</span>
+                <span class="auth-check-desc">Pausas calculadas entre tareas para maximizar tu enfoque.</span>
+              </div>
+            </div>
+
+            <div class="auth-check-item">
+              <div class="auth-check-icon">✓</div>
+              <div class="auth-check-text">
+                <span class="auth-check-title">Calendario estilo Outlook / Teams</span>
+                <span class="auth-check-desc">Visualiza 24 horas y 7 días con un diseño moderno e interactivo.</span>
+              </div>
+            </div>
+
+            <div class="auth-check-item">
+              <div class="auth-check-icon">✓</div>
+              <div class="auth-check-text">
+                <span class="auth-check-title">Sincronización privada en la nube</span>
+                <span class="auth-check-desc">Tus datos seguros y accesibles exclusivamente desde tu cuenta.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="auth-left-footer">
+          &copy; 2026 Crono-SYS. Todos los derechos reservados.
+        </div>
+      </div>
+
+      <!-- Lado Derecho (Blanco con Formulario) -->
+      <div class="auth-split-right">
+        
+        <!-- Barra Superior de Alternancia -->
+        <div class="auth-top-switch-bar">
+          <span id="authSwitchPromptText">¿Ya tienes una cuenta?</span>
+          <a href="#" class="auth-switch-link" id="authSwitchActionLink">Iniciar sesión &rarr;</a>
+        </div>
+
+        <!-- Tarjeta del Formulario -->
+        <div class="auth-card-inner">
+          <h1 class="auth-card-title" id="authCardHeadline">Crear cuenta en Crono-SYS</h1>
+
+          <form id="authMainForm">
+            <!-- Email -->
+            <div class="form-group" style="margin-bottom: 1.1rem;">
+              <label class="auth-field-label" for="authEmailInput">Email *</label>
+              <input type="email" id="authEmailInput" class="auth-input-styled" placeholder="ejemplo@correo.com" required autocomplete="email">
+            </div>
+
+            <!-- Contraseña -->
+            <div class="form-group" style="margin-bottom: 1.1rem;">
+              <label class="auth-field-label" for="authPasswordInput">Contraseña *</label>
+              <input type="password" id="authPasswordInput" class="auth-input-styled" placeholder="••••••••" required minlength="6" autocomplete="new-password">
+              <div class="auth-input-helper" id="authPasswordHelper">La contraseña debe tener al menos 6 caracteres.</div>
+            </div>
+
+            <!-- Repetir Contraseña (SOLO en Signup) -->
+            <div class="form-group" id="groupConfirmPassword" style="margin-bottom: 1.5rem;">
+              <label class="auth-field-label" for="authConfirmPasswordInput">Repetir contraseña *</label>
+              <input type="password" id="authConfirmPasswordInput" class="auth-input-styled" placeholder="••••••••" autocomplete="new-password">
+              <div id="passwordMismatchError" style="color: #dc2626; font-size: 0.8rem; font-weight: 600; margin-top: 4px; display: none;">
+                Las contraseñas no coinciden
+              </div>
+            </div>
+
+            <!-- Botón de Envío -->
+            <button type="submit" class="auth-submit-btn" id="btnAuthFormSubmit">
+              Crear Cuenta
+            </button>
+          </form>
+
+          <a href="#" class="auth-back-link" id="btnAuthBackToLanding">
+            &larr; Volver a la página principal
+          </a>
+        </div>
+
+        <div style="height: 20px;"></div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ==============================================================
+       3. APLICACIÓN PRINCIPAL (CRONO-SYS CALENDARIO Y TAREAS)
+       ============================================================== -->
+  <div id="viewApp" class="view-section view-hidden">
+    
+    <!-- Banner de Modo Vista Previa Interactiva (cuando no se guardan cambios) -->
+    <div id="previewModeBanner" class="preview-mode-banner" style="display: none;">
+      <div class="preview-banner-content">
+        <span>👁️</span>
+        <span><strong>Modo Vista Previa Interactiva:</strong> Puedes subir tu Excel y probar el organizador. Los cambios no se guardan en la nube.</span>
+      </div>
+      <div class="preview-banner-actions">
+        <button class="btn-preview-exit" id="btnExitPreviewMode">Salir de la demo</button>
+        <button class="btn-preview-save" id="btnSaveFromPreview">Crear cuenta para guardar</button>
+      </div>
+    </div>
+
+    <!-- Barra de Navegación de la Aplicación -->
+    <header class="app-header">
+      <div class="header-container">
+        
+        <!-- Marca y Logo Crono-SYS -->
+        <a href="#" class="brand-section" id="btnAppHomeLogo" title="Crono-SYS">
+          <img src="assets/logo.svg" alt="Crono-SYS Logo" class="brand-logo-img">
+          <div class="brand-title-wrap">
+            <div class="brand-name">Crono-SYS</div>
+          </div>
+        </a>
+
+        <!-- Botones de Acción de Cabecera -->
+        <div class="header-actions">
+          <button class="btn btn-secondary" id="btnDownloadTemplate" title="Descargar plantilla oficial .xlsx para rellenar">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span class="btn-text">Plantilla Excel</span>
+          </button>
+
+          <button class="btn btn-light-blue" id="btnOpenUploadModal">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <span class="btn-text">Subir Excel</span>
+          </button>
+
+          <button class="btn btn-primary" id="btnOpenTaskModal">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span class="btn-text">Añadir Tarea</span>
+          </button>
+
+          <!-- Panel de Usuario Estilo Microsoft Outlook (Captura 3) -->
+          <div class="ms-profile-container">
+            <button class="ms-profile-avatar-btn" id="btnMsProfileAvatar" title="Cuenta de Crono-SYS">
+              <span id="headerAvatarInitials">JM</span>
+            </button>
+
+            <!-- Menú Desplegable de Cuenta (Captura 3) -->
+            <div class="ms-account-flyout" id="msAccountFlyout">
+              <div class="ms-flyout-header">
+                <span class="ms-flyout-brand">Crono-SYS</span>
+                <button class="ms-flyout-signout" id="btnFlyoutSignOut">Cerrar sesión</button>
+              </div>
+
+              <div class="ms-flyout-body">
+                <div class="ms-avatar-large" id="flyoutAvatarInitials">JM</div>
+                <div class="ms-user-info-col">
+                  <div class="ms-user-name" id="flyoutUserName">USUARIO</div>
+                  <div class="ms-user-email" id="flyoutUserEmail">usuario@correo.com</div>
+
+                  <div class="ms-user-links">
+                    <a href="#" class="ms-account-action-link" id="btnOpenChangePassword">Cambiar contraseña</a>
+                    <a href="#" class="ms-account-action-link" id="btnOpenChangeEmail">Cambiar email</a>
+                    <a href="#" class="ms-account-action-link danger" id="btnOpenDeleteAccount">Eliminar cuenta</a>
+                  </div>
+                </div>
+              </div>
+
+              <div class="ms-flyout-footer">
+                <button class="ms-switch-account-btn" id="btnFlyoutSwitchAccount">
+                  <div class="ms-switch-account-icon">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="8.5" cy="7" r="4"></circle>
+                      <line x1="20" y1="8" x2="20" y2="14"></line>
+                      <line x1="23" y1="11" x2="17" y2="11"></line>
+                    </svg>
+                  </div>
+                  <span>Iniciar sesión con otra cuenta</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- CONTENEDOR PRINCIPAL DE LA APP -->
+    <main class="main-wrapper">
+
+      <!-- BARRA DE ESTADÍSTICAS Y RESUMEN -->
+      <section class="stats-summary-bar">
+        <div class="stat-card">
+          <div class="stat-icon-wrap">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">Horario Base (Excel)</span>
+            <span class="stat-value" id="statBaseCount">0 bloques</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon-wrap amber">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            </svg>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">Estudio y Tareas</span>
+            <span class="stat-value" id="statStudyHours">0h 00m</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon-wrap green">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
+              <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
+              <line x1="6" y1="1" x2="6" y2="4"></line>
+              <line x1="10" y1="1" x2="10" y2="4"></line>
+              <line x1="14" y1="1" x2="14" y2="4"></line>
+            </svg>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">Descansos Programados</span>
+            <span class="stat-value" id="statBreaksCount">0 pausas</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon-wrap purple">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">Estado de Sesión</span>
+            <span class="stat-value" id="statSecurityText" style="font-size: 1.05rem;">No ha iniciado sesión</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- BARRA DE CONTROLES DEL CALENDARIO -->
+      <div class="calendar-controls-bar">
+        <div class="calendar-title-group">
+          <h2 class="current-view-title" id="calendarTitle">Horario Semanal</h2>
+          <span class="active-schedule-badge" id="scheduleFileBadge">Sin archivo cargado</span>
+        </div>
+
+        <div class="control-buttons-group">
+          <!-- Selector Días Laborales vs Semana Completa -->
+          <div class="pill-switch">
+            <button class="pill-btn active" id="btnViewAllWeek">Semana (L-D)</button>
+            <button class="pill-btn" id="btnViewWorkdays">Laboral (L-V)</button>
+          </div>
+
+          <button class="btn btn-secondary" id="btnAutoOptimizeAll" title="Re-organizar automáticamente todas las tareas pendientes">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+            Re-organizar Todo
+          </button>
+
+          <button class="btn btn-icon-only" id="btnClearCalendar" title="Limpiar tareas del calendario">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- CALENDARIO ESTILO OUTLOOK / TEAMS -->
+      <section class="calendar-card" id="calendarMainContainer">
+        <!-- Inyectado dinámicamente por CalendarView -->
+      </section>
+
+      <!-- SECCIÓN DE LISTA DE TAREAS Y TIEMPOS DE ESTUDIO -->
+      <section class="tasks-section-wrap">
+        <div class="section-header-row">
+          <div class="section-title">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 11l3 3L22 4"></path>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+            </svg>
+            Tiempos de Estudio y Tareas Programadas
+          </div>
+          <button class="btn btn-light-blue" id="btnQuickAddTask">
+            + Nueva Tarea
+          </button>
+        </div>
+
+        <!-- Tarjetas de Tareas -->
+        <div class="task-cards-grid" id="taskCardsGrid">
+          <div class="empty-state-card">
+            <div class="empty-state-icon">
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </div>
+            <div class="empty-state-title">No hay tareas o estudios añadidos aún</div>
+            <p class="empty-state-desc">
+              Sube tu horario en Excel y añade sesiones de estudio o tareas. Crono-SYS las organizará de manera inteligente en los huecos disponibles con tus descansos preferidos.
+            </p>
+            <button class="btn btn-primary" id="btnEmptyStateAdd">
+              Crear Primera Tarea
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+  </div>
+
+
+  <!-- ==============================================================
+       MODAL: SUBIDA DE EXCEL CON SHEETJS
+       ============================================================== -->
+  <div class="modal-overlay" id="uploadModal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 class="modal-title">Subir Horario Base en Excel</h3>
+        <button class="modal-close-btn" data-close="uploadModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.875rem; color: var(--text-secondary);">
+          Sube tu archivo de horario semanal. Debe seguir exactamente el formato de plantilla de Crono-SYS (columnas: <strong>Hora/Día, lunes, martes, miercoles, jueves, viernes, sábado, domingo</strong> y filas de 00:00:00 a 23:00:00).
+        </p>
+
+        <!-- Zona Drag & Drop -->
+        <div class="excel-dropzone" id="dropzoneExcel">
+          <div class="dropzone-icon">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="8" y1="13" x2="16" y2="13"></line>
+              <line x1="8" y1="17" x2="16" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+          </div>
+          <div>
+            <strong style="color: var(--primary-800);">Arrastra tu archivo Excel aquí</strong>
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">
+              Formatos soportados: <strong>.xlsx, .xls</strong>
+            </div>
+          </div>
+          <button type="button" class="btn btn-secondary" id="btnSelectExcelFile">Examinar archivo</button>
+          <input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display: none;">
+        </div>
+
+        <div style="background: var(--primary-50); border: 1px solid var(--primary-200); border-radius: var(--radius-md); padding: 0.75rem 1rem; font-size: 0.82rem; color: var(--primary-900);">
+          💡 <strong>¿No tienes la plantilla?</strong> Descárgala ya preparada y solo tendrás que rellenar tus horas de clase o trabajo.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnModalDownloadTemplate">Descargar Plantilla</button>
+        <button class="btn btn-secondary" data-close="uploadModal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==============================================================
+       MODAL: AÑADIR TIEMPO DE ESTUDIO / TAREA (ORGANIZADOR AUTOMÁTICO)
+       ============================================================== -->
+  <div class="modal-overlay" id="taskModal">
+    <div class="modal-container" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3 class="modal-title">⚡ Organizar Tarea / Tiempo de Estudio</h3>
+        <button class="modal-close-btn" data-close="taskModal">&times;</button>
+      </div>
+      <form id="taskForm">
+        <div class="modal-body">
+          
+          <div class="form-group">
+            <label class="form-label" for="taskTitle">Título / Materia / Proyecto *</label>
+            <input type="text" id="taskTitle" class="form-input" placeholder="Ej: Estudio Matemáticas Discretas, Entrega Informe..." required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="taskCategory">Categoría</label>
+              <select id="taskCategory" class="form-select">
+                <option value="estudio">📚 Tiempo de Estudio</option>
+                <option value="tarea">💼 Tarea / Trabajo</option>
+                <option value="proyecto">🚀 Proyecto</option>
+                <option value="personal">🧘 Personal / Otro</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="taskPriority">Prioridad</label>
+              <select id="taskPriority" class="form-select">
+                <option value="high">🔴 Alta (Urgente)</option>
+                <option value="medium" selected>🟡 Media (Normal)</option>
+                <option value="low">🟢 Baja (Flexible)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="taskDurationHours">Tiempo Total Necesario *</label>
+              <div style="display: flex; gap: 0.5rem;">
+                <input type="number" id="taskDurationHours" class="form-input" min="0" max="40" value="2" style="width: 50%;">
+                <span style="display:flex; align-items:center; font-size: 0.85rem; color:var(--text-secondary);">horas</span>
+                <input type="number" id="taskDurationMinutes" class="form-input" min="0" max="59" step="5" value="0" style="width: 50%;">
+                <span style="display:flex; align-items:center; font-size: 0.85rem; color:var(--text-secondary);">min</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="taskMaxSession">Máximo por Sesión Continua</label>
+              <select id="taskMaxSession" class="form-select">
+                <option value="30">30 minutos</option>
+                <option value="45">45 minutos</option>
+                <option value="60" selected>60 minutos (1 hora)</option>
+                <option value="90">90 minutos (1.5 horas)</option>
+                <option value="120">120 minutos (2 horas)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="taskRestBetween">Descanso entre Trabajos/Sesiones</label>
+              <select id="taskRestBetween" class="form-select">
+                <option value="0">Sin descanso</option>
+                <option value="10">10 minutos</option>
+                <option value="15" selected>15 minutos (Recomendado)</option>
+                <option value="20">20 minutos</option>
+                <option value="30">30 minutos</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="taskTimePreference">Franja Horaria Preferida</label>
+              <select id="taskTimePreference" class="form-select">
+                <option value="any">Cualquier hora (07:00 - 23:00)</option>
+                <option value="morning">🌅 Mañanas (08:00 - 14:00)</option>
+                <option value="afternoon" selected>☀️ Tardes (14:00 - 20:00)</option>
+                <option value="evening">🌙 Noches (20:00 - 23:30)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Selector de Días Preferidos -->
+          <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <label class="form-label">Días Permitidos / Preferidos</label>
+              <div style="font-size: 0.75rem; display: flex; gap: 8px;">
+                <a href="#" id="btnSelectAllDays" style="color: var(--primary-600); text-decoration: none;">Todos</a>
+                <a href="#" id="btnSelectWorkdays" style="color: var(--primary-600); text-decoration: none;">L-V</a>
+              </div>
+            </div>
+
+            <div class="days-selector-grid">
+              <label class="day-checkbox-label">
+                <input type="checkbox" name="prefDays" value="lunes" checked>
+                <span>LUN</span>
+              </label>
+              <label class="day-checkbox-label">
+                <input type="checkbox" name="prefDays" value="martes" checked>
+                <span>MAR</span>
+              </label>
+              <label class="day-checkbox-label">
+                <input type="checkbox" name="prefDays" value="miercoles" checked>
+                <span>MIÉ</span>
+              </label>
+              <label class="day-checkbox-label">
+                <input type="checkbox" name="prefDays" value="jueves" checked>
+                <span>JUE</span>
+              </label>
+              <label class="day-checkbox-label">
+                <input type="checkbox" name="prefDays" value="viernes" checked>
+                <span>VIE</span>
+              </label>
+              <label class="day-checkbox-label">
+                <input type="checkbox" name="prefDays" value="sabado">
+                <span>SÁB</span>
+              </label>
+              <label class="day-checkbox-label">
+                <input type="checkbox" name="prefDays" value="domingo">
+                <span>DOM</span>
+              </label>
+            </div>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close="taskModal">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btnSubmitTask">
+            ⚡ Organizar Automáticamente
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==============================================================
+       MODAL: DETALLES DE UN BLOQUE DE CALENDARIO
+       ============================================================== -->
+  <div class="modal-overlay" id="blockDetailModal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 class="modal-title" id="detailModalTitle">Detalle de Actividad</h3>
+        <button class="modal-close-btn" data-close="blockDetailModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+          <div style="font-size: 1.15rem; font-weight: 700; color: var(--primary-900);" id="detailBlockTitle"></div>
+          
+          <div class="task-meta-row" style="font-size: 0.9rem;">
+            <strong>Día:</strong> <span id="detailBlockDay" style="text-transform: capitalize;"></span>
+          </div>
+
+          <div class="task-meta-row" style="font-size: 0.9rem;">
+            <strong>Horario:</strong> <span id="detailBlockTime"></span>
+          </div>
+
+          <div class="task-meta-row" style="font-size: 0.9rem;">
+            <strong>Tipo:</strong> <span id="detailBlockType"></span>
+          </div>
+
+          <div id="detailBlockNotesWrap" style="background: var(--bg-subtle); padding: 0.75rem; border-radius: var(--radius-sm); font-size: 0.85rem;">
+            <span id="detailBlockNotes"></span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnDeleteBlock" style="color: #dc2626; border-color: #fca5a5;">
+          Eliminar Bloque
+        </button>
+        <button class="btn btn-primary" data-close="blockDetailModal">Aceptar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==============================================================
+       MODALES DE GESTIÓN DE CUENTA (CONTRASEÑA, EMAIL, ELIMINAR)
+       ============================================================== -->
+  <!-- MODAL: CAMBIAR CONTRASEÑA -->
+  <div class="modal-overlay" id="modalChangePassword">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 class="modal-title">Cambiar Contraseña</h3>
+        <button class="modal-close-btn" data-close="modalChangePassword">&times;</button>
+      </div>
+      <form id="formChangePassword">
+        <div class="modal-body">
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label class="form-label" for="inputNewPassword">Nueva Contraseña *</label>
+            <input type="password" id="inputNewPassword" class="form-input" placeholder="••••••••" required minlength="6">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="inputConfirmNewPassword">Confirmar Nueva Contraseña *</label>
+            <input type="password" id="inputConfirmNewPassword" class="form-input" placeholder="••••••••" required minlength="6">
+          </div>
+          <div id="changePasswordError" style="color: #dc2626; font-size: 0.8rem; font-weight: 600; margin-top: 6px; display: none;">
+            Las contraseñas no coinciden.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close="modalChangePassword">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btnSubmitChangePassword">Actualizar Contraseña</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CAMBIAR EMAIL -->
+  <div class="modal-overlay" id="modalChangeEmail">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 class="modal-title">Cambiar Correo Electrónico</h3>
+        <button class="modal-close-btn" data-close="modalChangeEmail">&times;</button>
+      </div>
+      <form id="formChangeEmail">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="inputNewEmail">Nuevo Correo Electrónico *</label>
+            <input type="email" id="inputNewEmail" class="form-input" placeholder="nuevo@correo.com" required>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 6px;">
+            Recibirás una notificación para confirmar tu nueva dirección de correo.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close="modalChangeEmail">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btnSubmitChangeEmail">Actualizar Email</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ELIMINAR CUENTA -->
+  <div class="modal-overlay" id="modalDeleteAccount">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 class="modal-title" style="color: #dc2626;">Eliminar Cuenta</h3>
+        <button class="modal-close-btn" data-close="modalDeleteAccount">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--radius-md); padding: 1rem; color: #991b1b; font-size: 0.88rem;">
+          ⚠️ <strong>Atención:</strong> Esta acción es irreversible. Se eliminarán permanentemente tus horarios, tareas registradas, bloques de estudio y tu perfil en Crono-SYS.
+        </div>
+        <p style="font-size: 0.88rem; color: var(--text-secondary); margin-top: 1rem;">
+          ¿Estás seguro de que deseas eliminar tu cuenta de Crono-SYS?
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close="modalDeleteAccount">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btnConfirmDeleteAccount" style="background: #dc2626; border-color: #dc2626;">
+          Sí, Eliminar mi Cuenta
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTENEDOR DE TOASTS -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- SCRIPTS DE LA APLICACIÓN -->
+  <script src="js/excel-parser.js"></script>
+  <script src="js/scheduler.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/calendar-view.js"></script>
+  <script src="js/app.js"></script>
+
+  <!-- Service Worker Registration (PWABuilder Compliant) -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(registration => {
+            console.log('[PWABuilder] Service Worker registrado con alcance:', registration.scope);
+          })
+          .catch(error => {
+            console.warn('[PWABuilder] Fallo al registrar Service Worker:', error);
+          });
+      });
+    }
+  </script>
+
+</body>
+</html>
