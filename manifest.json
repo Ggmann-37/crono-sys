@@ -22,15 +22,15 @@
       "purpose": "any"
     },
     {
-      "src": "assets/favicon.svg",
+       "src": "assets/logo.svg",
       "sizes": "192x192",
-      "type": "svg+html",
-      "purpose": "maskable"
+      "type": "image/svg+html",
+      "purpose": "any"
     },
     {
-      "src": "assets/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
+       "src": "assets/logo.svg",
+      "sizes": "192x192",
+      "type": "image/svg+html",
       "purpose": "any"
     },
     {
