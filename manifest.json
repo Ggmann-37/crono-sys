@@ -16,15 +16,15 @@
   "prefer_related_applications": false,
   "icons": [
     {
-      "src": "assets/icon-192.png",
+      "src": "assets/logo.svg",
       "sizes": "192x192",
-      "type": "image/png",
+      "type": "image/svg+html",
       "purpose": "any"
     },
     {
-      "src": "assets/icon-192-maskable.png",
+      "src": "assets/favicon.svg",
       "sizes": "192x192",
-      "type": "image/png",
+      "type": "svg+html",
       "purpose": "maskable"
     },
     {
