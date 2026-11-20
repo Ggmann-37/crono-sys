@@ -35,6 +35,9 @@
 
   <!-- Supabase JS Client v2 CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Cloudflare Turnstile (widget Managed para proteger autenticación) -->
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" defer></script>
 </head>
 <body>
 
@@ -282,6 +285,12 @@
               <div id="passwordMismatchError" style="color: #dc2626; font-size: 0.8rem; font-weight: 600; margin-top: 4px; display: none;">
                 Las contraseñas no coinciden
               </div>
+            </div>
+
+            <!-- Cloudflare Turnstile: el token es obligatorio para acceder -->
+            <div class="turnstile-field">
+              <div id="turnstileWidget" class="cf-turnstile" aria-label="Verificación de seguridad"></div>
+              <div id="turnstileError" class="turnstile-error" role="alert" aria-live="polite"></div>
             </div>
 
             <!-- Botón de Envío -->

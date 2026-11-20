@@ -18,6 +18,13 @@ const App = {
     isPreviewMode: false    // Si es true, no guarda en la nube
   },
 
+  turnstile: {
+    siteKey: '0x4AAAAAAGKBPrSRb8JwpJkV',
+    widgetId: null,
+    token: null,
+    readyPromise: null
+  },
+
   /**
    * Inicialización de la aplicación
    */
@@ -26,6 +33,7 @@ const App = {
 
     // 1. Inicializar Supabase
     SupabaseService.init();
+    this.initTurnstile();
 
     // 2. Inicializar Calendario estilo Outlook/Teams
     const calendarContainer = document.getElementById('calendarMainContainer');
@@ -153,6 +161,7 @@ const App = {
     const mismatchError = document.getElementById('passwordMismatchError');
 
     if (mismatchError) mismatchError.style.display = 'none';
+    this.resetTurnstile();
 
     if (mode === 'signup') {
       if (leftHeadline) leftHeadline.textContent = 'Crea tu cuenta gratuita';
@@ -533,6 +542,61 @@ const App = {
   // MANEJO DEL FORMULARIO PRINCIPAL DE AUTH
   // ==========================================
 
+  initTurnstile() {
+    this.turnstile.readyPromise = new Promise((resolve) => {
+      const waitForTurnstile = () => {
+        if (window.turnstile && typeof window.turnstile.render === 'function') {
+          resolve();
+          return;
+        }
+        window.setTimeout(waitForTurnstile, 100);
+      };
+      waitForTurnstile();
+    });
+  },
+
+  async renderTurnstile() {
+    const container = document.getElementById('turnstileWidget');
+    if (!container) return;
+
+    await this.turnstile.readyPromise;
+    if (this.turnstile.widgetId !== null) return;
+
+    this.turnstile.widgetId = window.turnstile.render(container, {
+      sitekey: this.turnstile.siteKey,
+      action: 'authenticate',
+      callback: (token) => {
+        this.turnstile.token = token;
+        this.setTurnstileError('');
+      },
+      'expired-callback': () => {
+        this.turnstile.token = null;
+        this.setTurnstileError('La verificación ha caducado. Completa el desafío de nuevo.');
+      },
+      'error-callback': () => {
+        this.turnstile.token = null;
+        this.setTurnstileError('No se pudo cargar la verificación. Recarga la página e inténtalo de nuevo.');
+      }
+    });
+  },
+
+  resetTurnstile() {
+    this.turnstile.token = null;
+    this.setTurnstileError('');
+    if (this.turnstile.widgetId !== null && window.turnstile) {
+      window.turnstile.reset(this.turnstile.widgetId);
+    } else {
+      this.renderTurnstile().catch((error) => {
+        console.error('No se pudo inicializar Turnstile:', error);
+      });
+    }
+  },
+
+  setTurnstileError(message) {
+    const errorElement = document.getElementById('turnstileError');
+    if (errorElement) errorElement.textContent = message;
+  },
+
   async handleMainAuthSubmit(e) {
     e.preventDefault();
 
@@ -546,6 +610,12 @@ const App = {
 
     if (!email || !password) {
       this.showToast('Por favor completa todos los campos requeridos', 'error');
+      return;
+    }
+
+    if (!this.turnstile.token) {
+      this.setTurnstileError('Completa la verificación de seguridad para continuar.');
+      this.showToast('Completa la verificación de seguridad', 'error');
       return;
     }
 
@@ -564,7 +634,7 @@ const App = {
 
       try {
         this.showToast('Creando tu cuenta...', 'info');
-        await SupabaseService.signUp(email, password);
+        await SupabaseService.signUp(email, password, '', this.turnstile.token);
         this.showToast('Cuenta creada con éxito', 'success');
 
         // Tras registrarse con éxito, entra directamente a la app
@@ -577,7 +647,7 @@ const App = {
       // Modo LOGIN
       try {
         this.showToast('Iniciando sesión...', 'info');
-        await SupabaseService.signIn(email, password);
+        await SupabaseService.signIn(email, password, this.turnstile.token);
         this.showToast('Sesión iniciada correctamente', 'success');
 
         await this.loadInitialData();

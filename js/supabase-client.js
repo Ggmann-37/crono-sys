@@ -59,13 +59,14 @@ const SupabaseService = {
   /**
    * Registro con correo y contraseña
    */
-  async signUp(email, password, fullName = '') {
+  async signUp(email, password, fullName = '', captchaToken = null) {
     if (!this.client) throw new Error('Cliente Supabase no disponible');
     const { data, error } = await this.client.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: fullName }
+        data: { full_name: fullName },
+        captchaToken
       }
     });
     if (error) throw error;
@@ -76,11 +77,12 @@ const SupabaseService = {
   /**
    * Inicio de sesión con correo y contraseña
    */
-  async signIn(email, password) {
+  async signIn(email, password, captchaToken = null) {
     if (!this.client) throw new Error('Cliente Supabase no disponible');
     const { data, error } = await this.client.auth.signInWithPassword({
       email,
-      password
+      password,
+      options: { captchaToken }
     });
     if (error) throw error;
     this.currentUser = data.user;
