@@ -565,17 +565,27 @@ const App = {
     this.turnstile.widgetId = window.turnstile.render(container, {
       sitekey: this.turnstile.siteKey,
       action: 'authenticate',
+      execution: 'render',
+      appearance: 'always',
+      theme: 'light',
+      size: 'normal',
       callback: (token) => {
         this.turnstile.token = token;
         this.setTurnstileError('');
+        const submitBtn = document.getElementById('btnAuthFormSubmit');
+        if (submitBtn) submitBtn.disabled = false;
       },
       'expired-callback': () => {
         this.turnstile.token = null;
         this.setTurnstileError('La verificación ha caducado. Completa el desafío de nuevo.');
+        const submitBtn = document.getElementById('btnAuthFormSubmit');
+        if (submitBtn) submitBtn.disabled = true;
       },
       'error-callback': () => {
         this.turnstile.token = null;
         this.setTurnstileError('No se pudo cargar la verificación. Recarga la página e inténtalo de nuevo.');
+        const submitBtn = document.getElementById('btnAuthFormSubmit');
+        if (submitBtn) submitBtn.disabled = true;
       }
     });
   },
@@ -583,6 +593,8 @@ const App = {
   resetTurnstile() {
     this.turnstile.token = null;
     this.setTurnstileError('');
+    const submitBtn = document.getElementById('btnAuthFormSubmit');
+    if (submitBtn) submitBtn.disabled = true;
     if (this.turnstile.widgetId !== null && window.turnstile) {
       window.turnstile.reset(this.turnstile.widgetId);
     } else {
@@ -642,6 +654,7 @@ const App = {
         this.showView('app', { preview: false });
       } catch (err) {
         this.showToast(err.message, 'error');
+        this.resetTurnstile();
       }
     } else {
       // Modo LOGIN
@@ -654,6 +667,7 @@ const App = {
         this.showView('app', { preview: false });
       } catch (err) {
         this.showToast(err.message, 'error');
+        this.resetTurnstile();
       }
     }
   },

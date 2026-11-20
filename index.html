@@ -36,7 +36,7 @@
   <!-- Supabase JS Client v2 CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <!-- Cloudflare Turnstile (widget Managed para proteger autenticación) -->
+  <!-- Cloudflare Turnstile Managed (solo se usa en login y registro) -->
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" defer></script>
 </head>
 <body>
@@ -294,7 +294,7 @@
             </div>
 
             <!-- Botón de Envío -->
-            <button type="submit" class="auth-submit-btn" id="btnAuthFormSubmit">
+            <button type="submit" class="auth-submit-btn" id="btnAuthFormSubmit" disabled>
               Crear Cuenta
             </button>
           </form>
