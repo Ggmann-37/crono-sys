@@ -70,8 +70,20 @@ const SupabaseService = {
       }
     });
     if (error) throw error;
-    this.currentUser = data.user;
+    this.currentUser = data.session ? data.user : null;
     return data;
+  },
+
+  /**
+   * Reenvía el correo de confirmación para un registro pendiente
+   */
+  async resendConfirmation(email) {
+    if (!this.client) throw new Error('Cliente Supabase no disponible');
+    const { error } = await this.client.auth.resend({
+      type: 'signup',
+      email
+    });
+    if (error) throw error;
   },
 
   /**

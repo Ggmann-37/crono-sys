@@ -15,7 +15,8 @@ const App = {
     selectedBlock: null,
     currentView: 'landing', // 'landing', 'auth', 'app'
     authMode: 'signup',     // 'signup' o 'login'
-    isPreviewMode: false    // Si es true, no guarda en la nube
+    isPreviewMode: false,   // Si es true, no guarda en la nube
+    pendingConfirmationEmail: ''
   },
 
   turnstile: {
@@ -50,7 +51,8 @@ const App = {
 
     // 6. Comprobar sesión existente
     const session = await SupabaseService.getSession();
-    if (session && session.user) {
+    const confirmedEmail = session?.user?.email_confirmed_at || session?.user?.confirmed_at;
+    if (session && session.user && confirmedEmail) {
       // Si el usuario ya está autenticado, va directamente a la app
       await this.loadInitialData();
       this.showView('app', { preview: false });
@@ -149,6 +151,7 @@ const App = {
    */
   setAuthMode(mode) {
     this.state.authMode = mode;
+    this.state.pendingConfirmationEmail = '';
 
     const leftHeadline = document.getElementById('authLeftHeadline');
     const cardHeadline = document.getElementById('authCardHeadline');
@@ -159,8 +162,14 @@ const App = {
     const promptText = document.getElementById('authSwitchPromptText');
     const actionLink = document.getElementById('authSwitchActionLink');
     const mismatchError = document.getElementById('passwordMismatchError');
+    const confirmationPanel = document.getElementById('authEmailConfirmation');
+    const authForm = document.getElementById('authMainForm');
 
     if (mismatchError) mismatchError.style.display = 'none';
+    if (confirmationPanel) confirmationPanel.classList.add('view-hidden');
+    if (authForm) authForm.classList.remove('view-hidden');
+    const switchBar = document.querySelector('.auth-top-switch-bar');
+    if (switchBar) switchBar.classList.remove('view-hidden');
     this.resetTurnstile();
 
     if (mode === 'signup') {
@@ -182,6 +191,24 @@ const App = {
       if (promptText) promptText.textContent = '¿No tienes una cuenta?';
       if (actionLink) actionLink.innerHTML = 'Regístrate gratis &rarr;';
     }
+  },
+
+  showEmailConfirmation(email) {
+    this.state.pendingConfirmationEmail = email;
+
+    const authForm = document.getElementById('authMainForm');
+    const confirmationPanel = document.getElementById('authEmailConfirmation');
+    const confirmationEmail = document.getElementById('authConfirmationEmail');
+    const switchBar = document.querySelector('.auth-top-switch-bar');
+    const cardHeadline = document.getElementById('authCardHeadline');
+
+    if (authForm) authForm.classList.add('view-hidden');
+    if (confirmationPanel) confirmationPanel.classList.remove('view-hidden');
+    if (confirmationEmail) confirmationEmail.textContent = email;
+    if (switchBar) switchBar.classList.add('view-hidden');
+    if (cardHeadline) cardHeadline.textContent = 'Verificación pendiente';
+
+    this.resetTurnstile();
   },
 
   // ==========================================
@@ -251,6 +278,26 @@ const App = {
     const authForm = document.getElementById('authMainForm');
     if (authForm) {
       authForm.addEventListener('submit', (e) => this.handleMainAuthSubmit(e));
+    }
+
+    const resendConfirmation = document.getElementById('btnResendConfirmation');
+    if (resendConfirmation) {
+      resendConfirmation.addEventListener('click', async () => {
+        const email = this.state.pendingConfirmationEmail;
+        if (!email) return;
+
+        resendConfirmation.disabled = true;
+        resendConfirmation.textContent = 'Enviando...';
+        try {
+          await SupabaseService.resendConfirmation(email);
+          this.showToast('Correo de verificación reenviado', 'success');
+        } catch (err) {
+          this.showToast(err.message, 'error');
+        } finally {
+          resendConfirmation.disabled = false;
+          resendConfirmation.textContent = 'Reenviar correo';
+        }
+      });
     }
 
     // --- NAVEGACIÓN DESDE EL BANNER DE VISTA PREVIA ---
@@ -646,10 +693,21 @@ const App = {
 
       try {
         this.showToast('Creando tu cuenta...', 'info');
-        await SupabaseService.signUp(email, password, '', this.turnstile.token);
-        this.showToast('Cuenta creada con éxito', 'success');
+        const result = await SupabaseService.signUp(email, password, '', this.turnstile.token);
+        const user = result?.user || null;
+        const isConfirmed = !!(
+          result?.session &&
+          user &&
+          (user.email_confirmed_at || user.confirmed_at)
+        );
 
-        // Tras registrarse con éxito, entra directamente a la app
+        if (!isConfirmed) {
+          this.showToast('Revisa tu correo para confirmar la cuenta', 'info');
+          this.showEmailConfirmation(email);
+          return;
+        }
+
+        this.showToast('Cuenta creada con éxito', 'success');
         await this.loadInitialData();
         this.showView('app', { preview: false });
       } catch (err) {
@@ -1143,6 +1201,14 @@ const App = {
   setupAuth() {
     SupabaseService.onAuthStateChange((event, session) => {
       this.updateAuthUI(session ? session.user : null);
+
+      if (event === 'SIGNED_IN' && session?.user) {
+        const confirmedEmail = session.user.email_confirmed_at || session.user.confirmed_at;
+        if (confirmedEmail) {
+          this.loadInitialData()
+            .then(() => this.showView('app', { preview: false }));
+        }
+      }
     });
 
     SupabaseService.getSession().then(session => {

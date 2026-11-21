@@ -1149,6 +1149,10 @@ body {
   display: block;
 }
 
+.view-hidden {
+  display: none !important;
+}
+
 .view-section.view-hidden {
   display: none !important;
 }
@@ -1768,6 +1772,43 @@ body {
   opacity: 0.55;
   box-shadow: none;
   transform: none;
+}
+
+.auth-email-confirmation {
+  text-align: center;
+  border: 1px solid #dbe3ec;
+  border-radius: 12px;
+  background: #f8fafc;
+  padding: 1.5rem 1.25rem;
+}
+
+.auth-confirmation-icon {
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 0.75rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #e0f2fe;
+  color: #0369a1;
+  font-size: 1.5rem;
+}
+
+.auth-email-confirmation h2 {
+  margin: 0 0 0.75rem;
+  color: #0f172a;
+  font-size: 1.25rem;
+}
+
+.auth-email-confirmation p {
+  margin: 0.5rem 0;
+  color: #475569;
+  line-break: anywhere;
+}
+
+.auth-confirmation-help {
+  font-size: 0.875rem;
+  margin-bottom: 1.25rem !important;
 }
 
 .auth-submit-btn:hover {

@@ -33,7 +33,8 @@ El script creará automáticamente:
 
 1. En el panel de Supabase, ve a **Authentication** -> **Providers**.
 2. Asegúrate de que **Email** esté activado (`Enabled`).
-3. (Opcional) Si quieres probar registros sin necesidad de verificar el correo de inmediato, ve a **Authentication** -> **URL Configuration / Email Templates** o desactiva temporalmente "Confirm email" en **Authentication -> Providers -> Email**.
+3. Activa **Confirm email** en **Authentication -> Providers -> Email**.
+4. En **Authentication -> URL Configuration**, configura la URL del sitio (`https://<tu-dominio>/`) y añade esa misma URL a **Redirect URLs**. El enlace de confirmación debe abrir Crono-SYS para iniciar la sesión confirmada.
 
 ---
 

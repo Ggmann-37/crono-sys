@@ -299,6 +299,21 @@
             </button>
           </form>
 
+          <div id="authEmailConfirmation" class="auth-email-confirmation view-hidden" role="status" aria-live="polite">
+            <div class="auth-confirmation-icon" aria-hidden="true">✉</div>
+            <h2>Confirma tu correo electrónico</h2>
+            <p>
+              Hemos enviado un enlace de verificación a
+              <strong id="authConfirmationEmail"></strong>.
+            </p>
+            <p class="auth-confirmation-help">
+              Mira tu bandeja de entrada (y la carpeta de spam). Debes abrir el enlace de Supabase antes de poder entrar en Crono-SYS.
+            </p>
+            <button type="button" class="auth-submit-btn" id="btnResendConfirmation">
+              Reenviar correo
+            </button>
+          </div>
+
           <a href="#" class="auth-back-link" id="btnAuthBackToLanding">
             &larr; Volver a la página principal
           </a>
