@@ -53,9 +53,12 @@ const App = {
     const session = await SupabaseService.getSession();
     const confirmedEmail = session?.user?.email_confirmed_at || session?.user?.confirmed_at;
     if (session && session.user && confirmedEmail) {
+      this.clearPendingEmailConfirmation();
       // Si el usuario ya está autenticado, va directamente a la app
       await this.loadInitialData();
       this.showView('app', { preview: false });
+    } else if (this.restorePendingEmailConfirmation()) {
+      this.showView('auth', { mode: 'signup' });
     } else {
       // Si no, muestra la fase previa (Landing Hero)
       this.showView('landing');
@@ -95,6 +98,11 @@ const App = {
    * Cambia de pantalla entre Landing (fase previa), Auth (GitHub style) y App
    */
   showView(viewName, options = {}) {
+    if (this.state.pendingConfirmationEmail && viewName !== 'auth') {
+      this.showView('auth', { mode: 'signup' });
+      return;
+    }
+
     const viewLanding = document.getElementById('viewLanding');
     const viewAuth = document.getElementById('viewAuth');
     const viewApp = document.getElementById('viewApp');
@@ -151,7 +159,6 @@ const App = {
    */
   setAuthMode(mode) {
     this.state.authMode = mode;
-    this.state.pendingConfirmationEmail = '';
 
     const leftHeadline = document.getElementById('authLeftHeadline');
     const cardHeadline = document.getElementById('authCardHeadline');
@@ -164,12 +171,19 @@ const App = {
     const mismatchError = document.getElementById('passwordMismatchError');
     const confirmationPanel = document.getElementById('authEmailConfirmation');
     const authForm = document.getElementById('authMainForm');
+    const authBackLink = document.getElementById('btnAuthBackToLanding');
+
+    if (this.state.pendingConfirmationEmail) {
+      this.showEmailConfirmation(this.state.pendingConfirmationEmail);
+      return;
+    }
 
     if (mismatchError) mismatchError.style.display = 'none';
     if (confirmationPanel) confirmationPanel.classList.add('view-hidden');
     if (authForm) authForm.classList.remove('view-hidden');
     const switchBar = document.querySelector('.auth-top-switch-bar');
     if (switchBar) switchBar.classList.remove('view-hidden');
+    if (authBackLink) authBackLink.classList.remove('view-hidden');
     this.resetTurnstile();
 
     if (mode === 'signup') {
@@ -195,20 +209,35 @@ const App = {
 
   showEmailConfirmation(email) {
     this.state.pendingConfirmationEmail = email;
+    sessionStorage.setItem('cronosys_pending_confirmation_email', email);
 
     const authForm = document.getElementById('authMainForm');
     const confirmationPanel = document.getElementById('authEmailConfirmation');
     const confirmationEmail = document.getElementById('authConfirmationEmail');
     const switchBar = document.querySelector('.auth-top-switch-bar');
     const cardHeadline = document.getElementById('authCardHeadline');
+    const authBackLink = document.getElementById('btnAuthBackToLanding');
 
     if (authForm) authForm.classList.add('view-hidden');
     if (confirmationPanel) confirmationPanel.classList.remove('view-hidden');
     if (confirmationEmail) confirmationEmail.textContent = email;
     if (switchBar) switchBar.classList.add('view-hidden');
+    if (authBackLink) authBackLink.classList.add('view-hidden');
     if (cardHeadline) cardHeadline.textContent = 'Verificación pendiente';
 
     this.resetTurnstile();
+  },
+
+  restorePendingEmailConfirmation() {
+    const email = sessionStorage.getItem('cronosys_pending_confirmation_email');
+    if (!email) return false;
+    this.state.pendingConfirmationEmail = email;
+    return true;
+  },
+
+  clearPendingEmailConfirmation() {
+    this.state.pendingConfirmationEmail = '';
+    sessionStorage.removeItem('cronosys_pending_confirmation_email');
   },
 
   // ==========================================
@@ -658,6 +687,12 @@ const App = {
 
   async handleMainAuthSubmit(e) {
     e.preventDefault();
+
+    if (this.state.pendingConfirmationEmail) {
+      this.showEmailConfirmation(this.state.pendingConfirmationEmail);
+      this.showToast('Verifica tu correo antes de iniciar sesión', 'error');
+      return;
+    }
 
     const emailInput = document.getElementById('authEmailInput');
     const passwordInput = document.getElementById('authPasswordInput');
@@ -1205,6 +1240,7 @@ const App = {
       if (event === 'SIGNED_IN' && session?.user) {
         const confirmedEmail = session.user.email_confirmed_at || session.user.confirmed_at;
         if (confirmedEmail) {
+          this.clearPendingEmailConfirmation();
           this.loadInitialData()
             .then(() => this.showView('app', { preview: false }));
         }
