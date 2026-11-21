@@ -120,6 +120,21 @@ const SupabaseService = {
   },
 
   /**
+   * Inicio de sesión o registro mediante el proveedor GitHub
+   */
+  async signInWithGitHub() {
+    if (!this.client) throw new Error('Cliente Supabase no disponible');
+    const redirectUrl = `${window.location.origin}${window.location.pathname}`;
+    const { error } = await this.client.auth.signInWithOAuth({
+      provider: 'github',
+      options: {
+        redirectTo: redirectUrl
+      }
+    });
+    if (error) throw error;
+  },
+
+  /**
    * Cierre de sesión
    */
   async signOut() {

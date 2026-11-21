@@ -13,3 +13,7 @@ Cuando Supabase tiene habilitada la confirmación por correo, el registro muestr
 ## Inicio de sesión con Google
 
 El panel de login y registro incluye el botón **Iniciar sesión con Google** / **Registrarse con Google**. El proveedor debe estar habilitado en Supabase con las credenciales OAuth de Google y la URL de redirección configurada en el proyecto.
+
+## Inicio de sesión con GitHub
+
+El panel también incluye **Iniciar sesión con GitHub** / **Registrarse con GitHub**. El proveedor debe estar habilitado en Supabase con la aplicación OAuth de GitHub y la URL de redirección configurada.

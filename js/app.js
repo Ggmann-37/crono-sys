@@ -167,6 +167,7 @@ const App = {
     const passwordHelper = document.getElementById('authPasswordHelper');
     const submitBtn = document.getElementById('btnAuthFormSubmit');
     const googleButtonText = document.getElementById('authGoogleButtonText');
+    const githubButtonText = document.getElementById('authGitHubButtonText');
     const promptText = document.getElementById('authSwitchPromptText');
     const actionLink = document.getElementById('authSwitchActionLink');
     const mismatchError = document.getElementById('passwordMismatchError');
@@ -195,6 +196,7 @@ const App = {
       if (passwordHelper) passwordHelper.textContent = 'La contraseña debe tener al menos 6 caracteres.';
       if (submitBtn) submitBtn.textContent = 'Crear Cuenta';
       if (googleButtonText) googleButtonText.textContent = 'Registrarse con Google';
+      if (githubButtonText) githubButtonText.textContent = 'Registrarse con GitHub';
       if (promptText) promptText.textContent = '¿Ya tienes una cuenta?';
       if (actionLink) actionLink.innerHTML = 'Iniciar sesión &rarr;';
     } else {
@@ -205,6 +207,7 @@ const App = {
       if (passwordHelper) passwordHelper.textContent = '';
       if (submitBtn) submitBtn.textContent = 'Iniciar Sesión';
       if (googleButtonText) googleButtonText.textContent = 'Iniciar sesión con Google';
+      if (githubButtonText) githubButtonText.textContent = 'Iniciar sesión con GitHub';
       if (promptText) promptText.textContent = '¿No tienes una cuenta?';
       if (actionLink) actionLink.innerHTML = 'Regístrate gratis &rarr;';
     }
@@ -325,6 +328,24 @@ const App = {
           await SupabaseService.signInWithGoogle();
         } catch (err) {
           googleButton.disabled = false;
+          this.showToast(err.message, 'error');
+        }
+      });
+    }
+
+    const githubButton = document.getElementById('btnAuthGitHub');
+    if (githubButton) {
+      githubButton.addEventListener('click', async () => {
+        if (this.state.pendingConfirmationEmail) {
+          this.showToast('Verifica tu correo antes de iniciar sesión', 'error');
+          return;
+        }
+
+        githubButton.disabled = true;
+        try {
+          await SupabaseService.signInWithGitHub();
+        } catch (err) {
+          githubButton.disabled = false;
           this.showToast(err.message, 'error');
         }
       });
