@@ -102,6 +102,24 @@ const SupabaseService = {
   },
 
   /**
+   * Inicio de sesión o registro mediante el proveedor Google
+   */
+  async signInWithGoogle() {
+    if (!this.client) throw new Error('Cliente Supabase no disponible');
+    const redirectUrl = `${window.location.origin}${window.location.pathname}`;
+    const { error } = await this.client.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: redirectUrl,
+        queryParams: {
+          prompt: 'select_account'
+        }
+      }
+    });
+    if (error) throw error;
+  },
+
+  /**
    * Cierre de sesión
    */
   async signOut() {

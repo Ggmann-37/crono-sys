@@ -9,3 +9,7 @@ La clave secreta nunca debe añadirse al repositorio ni al código del navegador
 ## Confirmación del correo al registrarse
 
 Cuando Supabase tiene habilitada la confirmación por correo, el registro muestra un panel que indica revisar la bandeja de entrada y permite reenviar el correo. La aplicación no entra en el panel principal hasta que el enlace de confirmación inicia una sesión activa y el usuario aparece como confirmado.
+
+## Inicio de sesión con Google
+
+El panel de login y registro incluye el botón **Iniciar sesión con Google** / **Registrarse con Google**. El proveedor debe estar habilitado en Supabase con las credenciales OAuth de Google y la URL de redirección configurada en el proyecto.

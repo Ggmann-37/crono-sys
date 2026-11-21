@@ -166,6 +166,7 @@ const App = {
     const inputConfirm = document.getElementById('authConfirmPasswordInput');
     const passwordHelper = document.getElementById('authPasswordHelper');
     const submitBtn = document.getElementById('btnAuthFormSubmit');
+    const googleButtonText = document.getElementById('authGoogleButtonText');
     const promptText = document.getElementById('authSwitchPromptText');
     const actionLink = document.getElementById('authSwitchActionLink');
     const mismatchError = document.getElementById('passwordMismatchError');
@@ -193,6 +194,7 @@ const App = {
       if (inputConfirm) inputConfirm.setAttribute('required', 'required');
       if (passwordHelper) passwordHelper.textContent = 'La contraseña debe tener al menos 6 caracteres.';
       if (submitBtn) submitBtn.textContent = 'Crear Cuenta';
+      if (googleButtonText) googleButtonText.textContent = 'Registrarse con Google';
       if (promptText) promptText.textContent = '¿Ya tienes una cuenta?';
       if (actionLink) actionLink.innerHTML = 'Iniciar sesión &rarr;';
     } else {
@@ -202,6 +204,7 @@ const App = {
       if (inputConfirm) inputConfirm.removeAttribute('required');
       if (passwordHelper) passwordHelper.textContent = '';
       if (submitBtn) submitBtn.textContent = 'Iniciar Sesión';
+      if (googleButtonText) googleButtonText.textContent = 'Iniciar sesión con Google';
       if (promptText) promptText.textContent = '¿No tienes una cuenta?';
       if (actionLink) actionLink.innerHTML = 'Regístrate gratis &rarr;';
     }
@@ -307,6 +310,24 @@ const App = {
     const authForm = document.getElementById('authMainForm');
     if (authForm) {
       authForm.addEventListener('submit', (e) => this.handleMainAuthSubmit(e));
+    }
+
+    const googleButton = document.getElementById('btnAuthGoogle');
+    if (googleButton) {
+      googleButton.addEventListener('click', async () => {
+        if (this.state.pendingConfirmationEmail) {
+          this.showToast('Verifica tu correo antes de iniciar sesión', 'error');
+          return;
+        }
+
+        googleButton.disabled = true;
+        try {
+          await SupabaseService.signInWithGoogle();
+        } catch (err) {
+          googleButton.disabled = false;
+          this.showToast(err.message, 'error');
+        }
+      });
     }
 
     const resendConfirmation = document.getElementById('btnResendConfirmation');
