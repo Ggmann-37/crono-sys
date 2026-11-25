@@ -111,116 +111,7 @@
         </div>
       </div>
 
-      <!-- Lado Derecho: Mockup Visual Moderno estilo Outlook / Teams -->
-      <div class="hero-right">
-        <div class="mockup-podium-base">
-          
-          <!-- Ventana Aplicación Calendario -->
-          <div class="mockup-desktop-card">
-            <div class="mockup-window-header">
-              <div class="mockup-window-dots">
-                <span class="mockup-dot red"></span>
-                <span class="mockup-dot yellow"></span>
-                <span class="mockup-dot green"></span>
-              </div>
-              <div class="mockup-window-search">🔍 Crono-SYS Semanal</div>
-              <div style="font-size: 0.7rem; color: #64748b; font-weight: 700;">Noviembre 2026</div>
-            </div>
-
-            <div class="mockup-calendar-mini-grid">
-              <div class="mini-time-label"></div>
-              <div class="mini-day-header">LUN</div>
-              <div class="mini-day-header">MAR</div>
-              <div class="mini-day-header">MIÉ</div>
-              <div class="mini-day-header">JUE</div>
-              <div class="mini-day-header">VIE</div>
-
-              <!-- 09:00 -->
-              <div class="mini-time-label">09:00</div>
-              <div class="mini-chip base">🏢 Trabajo</div>
-              <div class="mini-chip base">🏢 Trabajo</div>
-              <div class="mini-chip base">🏢 Trabajo</div>
-              <div class="mini-chip base">🏢 Trabajo</div>
-              <div class="mini-chip base">🏢 Trabajo</div>
-
-              <!-- 11:00 -->
-              <div class="mini-time-label">11:00</div>
-              <div class="mini-chip study">📚 Estudio Mat.</div>
-              <div class="mini-chip study">📚 Programación</div>
-              <div class="mini-chip study">📚 Estudio Mat.</div>
-              <div class="mini-chip study">📚 Programación</div>
-              <div class="mini-chip study">📚 Repaso Final</div>
-
-              <!-- 12:00 -->
-              <div class="mini-time-label">12:00</div>
-              <div class="mini-chip break">☕ Pausa 15m</div>
-              <div class="mini-chip break">☕ Pausa 15m</div>
-              <div class="mini-chip break">☕ Pausa 15m</div>
-              <div class="mini-chip break">☕ Pausa 15m</div>
-              <div class="mini-chip break">☕ Pausa 15m</div>
-            </div>
-          </div>
-
-          <!-- Móvil Flotante en Perspectiva -->
-          <div class="mockup-mobile-card">
-            <div class="mockup-mobile-header">
-              <span>📅 Hoy</span>
-              <span style="color: #38bdf8;">Teams View</span>
-            </div>
-            <div class="mockup-mobile-item">
-              <span>09:00 Trabajo Base</span>
-              <span style="color: #4ade80;">✓</span>
-            </div>
-            <div class="mockup-mobile-item">
-              <span>11:00 Estudio Física</span>
-              <span style="color: #38bdf8;">●</span>
-            </div>
-            <div class="mockup-mobile-item">
-              <span>12:00 Descanso 15m</span>
-              <span style="color: #fbbf24;">☕</span>
-            </div>
-          </div>
-
-          <!-- Píldora Flotante -->
-          <div class="mockup-floating-badge">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#0284c7" stroke-width="2">
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-            </svg>
-            <span>Horario optimizado con descansos</span>
-          </div>
-
-        </div>
-      </div>
-
     </header>
-
-    <section class="landing-how" aria-labelledby="landingHowTitle">
-      <div class="landing-how-heading">
-        <p class="landing-eyebrow">Empieza en minutos</p>
-        <h2 id="landingHowTitle">De tu Excel a una semana más clara</h2>
-      </div>
-      <div class="landing-steps">
-        <article class="landing-step">
-          <span class="landing-step-number">1</span>
-          <h3>Importa tu horario</h3>
-          <p>Sube tu archivo Excel o descarga la plantilla para preparar tus clases y compromisos.</p>
-        </article>
-        <article class="landing-step">
-          <span class="landing-step-number">2</span>
-          <h3>Planifica tus tareas</h3>
-          <p>Elige cuánto tiempo necesitas, tus días y tus franjas horarias preferidas.</p>
-        </article>
-        <article class="landing-step">
-          <span class="landing-step-number">3</span>
-          <h3>Revisa y ajusta</h3>
-          <p>Consulta las sesiones y descansos en el calendario y cambia tu plan cuando lo necesites.</p>
-        </article>
-      </div>
-      <p class="landing-privacy">
-        Tus archivos Excel se leen en el navegador; se guardan los bloques del horario, no el archivo original.
-        Sin iniciar sesión, los cambios permanecen en este dispositivo. Con cuenta, se sincronizan con tu cuenta.
-      </p>
-    </section>
 
   </div>
 
@@ -589,25 +480,6 @@
       <!-- CALENDARIO ESTILO OUTLOOK / TEAMS -->
       <section class="calendar-card" id="calendarMainContainer" aria-label="Calendario semanal">
         <!-- Inyectado dinámicamente por CalendarView -->
-      </section>
-
-      <section class="tasks-section-wrap" aria-labelledby="tasksSectionTitle">
-        <div class="section-header-row">
-          <div>
-            <h2 class="section-title" id="tasksSectionTitle">Mis tareas</h2>
-            <p class="tasks-section-help">Revisa lo planificado, lo pendiente y lo que ya completaste.</p>
-          </div>
-          <div class="tasks-section-controls">
-            <label class="sr-only" for="taskStatusFilter">Filtrar tareas</label>
-            <select class="form-select task-filter" id="taskStatusFilter">
-              <option value="all">Todas</option>
-              <option value="open">Pendientes</option>
-              <option value="completed">Completadas</option>
-            </select>
-            <button class="btn btn-primary" id="btnQuickAddTask" type="button">Añadir tarea</button>
-          </div>
-        </div>
-        <div class="task-cards-grid" id="taskCardsGrid" aria-live="polite"></div>
       </section>
 
     </main>

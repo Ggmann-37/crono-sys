@@ -480,32 +480,6 @@ const App = {
       btnOpenTask.addEventListener('click', () => this.openTaskModal());
     }
 
-    const btnQuickAdd = document.getElementById('btnQuickAddTask');
-    if (btnQuickAdd) {
-      btnQuickAdd.addEventListener('click', () => this.openTaskModal());
-    }
-
-    const btnEmptyAdd = document.getElementById('btnEmptyStateAdd');
-    if (btnEmptyAdd) {
-      btnEmptyAdd.addEventListener('click', () => this.openTaskModal());
-    }
-
-    const taskFilter = document.getElementById('taskStatusFilter');
-    if (taskFilter) taskFilter.addEventListener('change', () => this.renderTaskCards());
-
-    const taskCards = document.getElementById('taskCardsGrid');
-    if (taskCards) {
-      taskCards.addEventListener('click', (event) => {
-        const button = event.target.closest('button[data-task-action]');
-        if (!button) return;
-        const { taskAction, taskId } = button.dataset;
-        if (taskAction === 'complete') this.setTaskCompleted(taskId, true);
-        if (taskAction === 'reopen') this.setTaskCompleted(taskId, false);
-        if (taskAction === 'edit') this.openTaskModal(this.state.tasks.find(task => task.id === taskId));
-        if (taskAction === 'delete') this.deleteTask(taskId);
-      });
-    }
-
     const confirmImport = document.getElementById('btnConfirmExcelImport');
     if (confirmImport) confirmImport.addEventListener('click', () => this.confirmExcelImport());
     const cancelImport = document.getElementById('btnCancelExcelImport');
@@ -1269,7 +1243,7 @@ const App = {
       const incomplete = result.report.filter(item => !item.success);
       if (incomplete.length) {
         const remaining = incomplete.reduce((total, item) => total + item.unplacedMinutes, 0);
-        this.showToast(`Reorganización parcial: ${remaining} min pendientes en ${incomplete.length} tarea(s). Revisa “Mis tareas”.`, 'info');
+        this.showToast(`Reorganización parcial: ${remaining} min pendientes en ${incomplete.length} tarea(s).`, 'info');
       } else {
         this.showToast('Horario y tareas reorganizados con éxito.', 'success');
       }
@@ -1686,7 +1660,6 @@ const App = {
     if (this.state.activeModalId === modalId) {
       this.state.activeModalId = null;
       if (this.state.modalTrigger?.isConnected) this.state.modalTrigger.focus();
-      else if (modalId === 'taskModal') document.getElementById('btnQuickAddTask')?.focus();
       else document.getElementById('btnOpenTaskModal')?.focus();
       this.state.modalTrigger = null;
     }
