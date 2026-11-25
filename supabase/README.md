@@ -27,6 +27,10 @@ El script creará automáticamente:
 - **Políticas RLS**: Cada tabla tendrá `ALTER TABLE ... ENABLE ROW LEVEL SECURITY;` y políticas estrictas vinculadas a `auth.uid() = user_id`.
 - **Triggers**: Creación automática del perfil al registrar un nuevo usuario con Supabase Auth.
 
+Si ya configuraste el esquema, ejecuta también [`supabase/migrations/20261125120000_allow_project_task_category.sql`](./migrations/20261125120000_allow_project_task_category.sql) en el SQL Editor para permitir la categoría “Proyecto”.
+
+Los archivos Excel se leen en el navegador; Crono-SYS guarda los bloques extraídos, no sube el archivo original. Sin sesión, horarios y tareas se guardan en el almacenamiento local de ese navegador. La app muestra cuándo un guardado solo quedó local y no se sincronizó con Supabase.
+
 ---
 
 ## Paso 3: Configuración de Autenticación en Supabase

@@ -16,7 +16,12 @@ const App = {
     currentView: 'landing', // 'landing', 'auth', 'app'
     authMode: 'signup',     // 'signup' o 'login'
     isPreviewMode: false,   // Si es true, no guarda en la nube
-    pendingConfirmationEmail: ''
+    pendingConfirmationEmail: '',
+    pendingImport: null,
+    editingTaskId: null,
+    previewInitialized: false,
+    activeModalId: null,
+    modalTrigger: null
   },
 
   turnstile: {
@@ -83,6 +88,7 @@ const App = {
         document.body.classList.add('is-desktop-device');
         document.body.classList.remove('is-mobile-device');
       }
+      CalendarView.setMobileDayView(window.matchMedia('(max-width: 640px)').matches);
     };
 
     updateDeviceClass();
@@ -134,6 +140,7 @@ const App = {
         if (previewBanner) previewBanner.style.display = 'flex';
         if (statSecurity) statSecurity.textContent = 'Modo Vista Previa';
         if (authText) authText.textContent = 'Vista Previa';
+        this.setStorageStatus('preview');
       } else {
         if (previewBanner) previewBanner.style.display = 'none';
         if (statSecurity) {
@@ -152,6 +159,61 @@ const App = {
 
       window.scrollTo(0, 0);
     }
+  },
+
+  startPreview() {
+    if (this.state.previewInitialized) return;
+    this.state.previewInitialized = true;
+    this.state.fileName = 'Horario de ejemplo';
+    this.state.baseBlocks = [
+      { id: 'demo-base-mon', day: 'lunes', startTime: '09:00', endTime: '12:00', title: 'Clases', type: 'base', color: '#2563eb' },
+      { id: 'demo-base-tue', day: 'martes', startTime: '10:00', endTime: '13:00', title: 'Trabajo', type: 'base', color: '#2563eb' },
+      { id: 'demo-base-wed', day: 'miercoles', startTime: '09:00', endTime: '12:00', title: 'Clases', type: 'base', color: '#2563eb' },
+      { id: 'demo-base-thu', day: 'jueves', startTime: '10:00', endTime: '13:00', title: 'Trabajo', type: 'base', color: '#2563eb' },
+      { id: 'demo-base-fri', day: 'viernes', startTime: '09:00', endTime: '11:00', title: 'Clases', type: 'base', color: '#2563eb' }
+    ];
+    this.state.tasks = [
+      {
+        id: 'demo-task-math',
+        title: 'Repasar matemáticas',
+        category: 'estudio',
+        priority: 'high',
+        durationMinutes: 120,
+        maxSessionMinutes: 60,
+        restBetweenMinutes: 15,
+        timePreference: 'afternoon',
+        preferredDays: ['lunes', 'miercoles', 'viernes'],
+        status: 'pending'
+      },
+      {
+        id: 'demo-task-project',
+        title: 'Avanzar el proyecto',
+        category: 'proyecto',
+        priority: 'medium',
+        durationMinutes: 90,
+        maxSessionMinutes: 45,
+        restBetweenMinutes: 10,
+        timePreference: 'any',
+        preferredDays: ['martes', 'jueves'],
+        status: 'pending'
+      }
+    ];
+
+    const scheduleBadge = document.getElementById('scheduleFileBadge');
+    if (scheduleBadge) {
+      scheduleBadge.textContent = this.state.fileName;
+      scheduleBadge.style.background = '#dcfce7';
+      scheduleBadge.style.color = '#15803d';
+    }
+
+    const result = SmartScheduler.reorganizeAll(this.state.tasks, this.state.baseBlocks);
+    this.state.taskBlocks = result.taskBlocks;
+    this.state.breakBlocks = result.breakBlocks;
+    const taskStatuses = new Map(result.report.map(item => [item.taskId, item.success ? 'scheduled' : 'pending']));
+    this.state.tasks = this.state.tasks.map(task => ({ ...task, status: taskStatuses.get(task.id) || 'pending' }));
+    this.updateCalendar();
+    this.renderTaskCards();
+    this.updateStats();
   },
 
   /**
@@ -265,8 +327,14 @@ const App = {
     // "Probar gratis" -> Preview interactiva que NO guarda
     const btnHeroPreview = document.getElementById('btnHeroPreview');
     const btnNavPreview = document.getElementById('btnNavPreview');
-    if (btnHeroPreview) btnHeroPreview.addEventListener('click', () => this.showView('app', { preview: true }));
-    if (btnNavPreview) btnNavPreview.addEventListener('click', () => this.showView('app', { preview: true }));
+    if (btnHeroPreview) btnHeroPreview.addEventListener('click', () => {
+      this.startPreview();
+      this.showView('app', { preview: true });
+    });
+    if (btnNavPreview) btnNavPreview.addEventListener('click', () => {
+      this.startPreview();
+      this.showView('app', { preview: true });
+    });
 
     const btnLandingTemplate = document.getElementById('btnLandingDownloadTemplate');
     if (btnLandingTemplate) {
@@ -409,18 +477,39 @@ const App = {
 
     const btnOpenTask = document.getElementById('btnOpenTaskModal');
     if (btnOpenTask) {
-      btnOpenTask.addEventListener('click', () => this.openModal('taskModal'));
+      btnOpenTask.addEventListener('click', () => this.openTaskModal());
     }
 
     const btnQuickAdd = document.getElementById('btnQuickAddTask');
     if (btnQuickAdd) {
-      btnQuickAdd.addEventListener('click', () => this.openModal('taskModal'));
+      btnQuickAdd.addEventListener('click', () => this.openTaskModal());
     }
 
     const btnEmptyAdd = document.getElementById('btnEmptyStateAdd');
     if (btnEmptyAdd) {
-      btnEmptyAdd.addEventListener('click', () => this.openModal('taskModal'));
+      btnEmptyAdd.addEventListener('click', () => this.openTaskModal());
     }
+
+    const taskFilter = document.getElementById('taskStatusFilter');
+    if (taskFilter) taskFilter.addEventListener('change', () => this.renderTaskCards());
+
+    const taskCards = document.getElementById('taskCardsGrid');
+    if (taskCards) {
+      taskCards.addEventListener('click', (event) => {
+        const button = event.target.closest('button[data-task-action]');
+        if (!button) return;
+        const { taskAction, taskId } = button.dataset;
+        if (taskAction === 'complete') this.setTaskCompleted(taskId, true);
+        if (taskAction === 'reopen') this.setTaskCompleted(taskId, false);
+        if (taskAction === 'edit') this.openTaskModal(this.state.tasks.find(task => task.id === taskId));
+        if (taskAction === 'delete') this.deleteTask(taskId);
+      });
+    }
+
+    const confirmImport = document.getElementById('btnConfirmExcelImport');
+    if (confirmImport) confirmImport.addEventListener('click', () => this.confirmExcelImport());
+    const cancelImport = document.getElementById('btnCancelExcelImport');
+    if (cancelImport) cancelImport.addEventListener('click', () => this.cancelExcelImport());
 
     // --- PANEL DE USUARIO ESTILO OUTLOOK (CAPTURA 3) ---
     const btnProfileAvatar = document.getElementById('btnMsProfileAvatar');
@@ -578,9 +667,40 @@ const App = {
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
       overlay.addEventListener('click', (e) => {
         if (e.target === overlay) {
-          overlay.classList.remove('active');
+          this.closeModal(overlay.id);
         }
       });
+    });
+
+    document.addEventListener('keydown', (event) => {
+      const modal = this.state.activeModalId && document.getElementById(this.state.activeModalId);
+      if (!modal) return;
+
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        this.closeModal(this.state.activeModalId);
+        return;
+      }
+
+      if (event.key !== 'Tab') return;
+      const focusable = [...modal.querySelectorAll(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+      )].filter(element => element.getClientRects().length > 0);
+      if (focusable.length === 0) {
+        event.preventDefault();
+        modal.querySelector('.modal-container')?.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     });
 
     this.setupDropzone();
@@ -861,34 +981,55 @@ const App = {
    * Procesa el archivo Excel cargado y valida estrictamente el formato
    */
   async processExcelFile(file) {
+    if (this.state.pendingImport) this.cancelExcelImport();
     this.showToast('Analizando archivo Excel con SheetJS...', 'info');
 
     const result = await ExcelParser.parseExcelFile(file);
 
-    // Requisito estricto: si no cumple el formato, dar mensaje "formato no valido"
     if (!result.valid) {
-      this.showToast(result.error || 'formato no valido', 'error');
+      this.showToast(result.error || 'No se pudo validar el archivo.', 'error');
       return;
     }
 
-    // Formato válido: guardar bloques base en memoria
+    this.state.pendingImport = result;
+    const preview = document.getElementById('excelImportPreview');
+    const confirmButton = document.getElementById('btnConfirmExcelImport');
+    const cancelButton = document.getElementById('btnCancelExcelImport');
+    const warnings = result.warnings || [];
+    if (preview) {
+      preview.innerHTML = `
+        <h4>Revisa el horario detectado</h4>
+        <p><strong>${this.escapeHtml(result.fileName)}</strong>: ${result.blocks.length} bloques.</p>
+        ${warnings.length
+          ? `<p class="import-warning">Se detectaron posibles solapamientos:</p><ul>${warnings.map(warning => `<li>${this.escapeHtml(warning)}</li>`).join('')}</ul>`
+          : '<p>No se detectaron solapamientos.</p>'}
+      `;
+      preview.classList.remove('view-hidden');
+    }
+    if (confirmButton) confirmButton.classList.remove('view-hidden');
+    if (cancelButton) cancelButton.classList.remove('view-hidden');
+    this.showToast('Archivo revisado. Confirma la importación cuando estés listo.', 'success');
+  },
+
+  async confirmExcelImport() {
+    const result = this.state.pendingImport;
+    if (!result) return;
+
+    this.state.pendingImport = null;
     this.state.fileName = result.fileName;
     this.state.baseBlocks = result.blocks;
+    let saveRes = { isLocal: false };
 
-    // Solo guardar de forma permanente si NO estamos en vista previa
     if (!this.state.isPreviewMode) {
-      const saveRes = await SupabaseService.saveSchedule(
+      saveRes = await SupabaseService.saveSchedule(
         'Horario Base Semanal',
         result.fileName,
         result.blocks
       );
-
-      if (saveRes.schedule && saveRes.schedule.id) {
-        this.state.scheduleId = saveRes.schedule.id;
-      }
+      if (saveRes.schedule?.id) this.state.scheduleId = saveRes.schedule.id;
+      this.setStorageStatus(saveRes.isLocal ? 'local' : 'cloud');
     }
 
-    // Actualizar nombre de archivo en la interfaz
     const badge = document.getElementById('scheduleFileBadge');
     if (badge) {
       badge.textContent = result.fileName;
@@ -896,15 +1037,38 @@ const App = {
       badge.style.color = '#15803d';
     }
 
-    // Reorganizar las tareas existentes si las hubiera con el nuevo horario base
-    if (this.state.tasks.length > 0) {
-      this.reorganizeAllTasks(false);
-    } else {
-      this.updateCalendar();
-    }
+    if (this.state.tasks.length > 0) await this.reorganizeAllTasks(false);
+    else this.updateCalendar();
 
+    this.resetExcelImportPreview();
     this.closeModal('uploadModal');
-    this.showToast(`Horario importado con éxito (${result.blocks.length} bloques).`, 'success');
+    this.showToast(
+      this.state.isPreviewMode
+        ? `Horario de prueba importado (${result.blocks.length} bloques). No se guardará.`
+        : saveRes?.isLocal
+        ? saveRes.error
+          ? 'Horario guardado solo en este dispositivo; no se pudo sincronizar.'
+          : 'Horario guardado en este dispositivo.'
+          : `Horario importado y sincronizado (${result.blocks.length} bloques).`,
+      saveRes?.isLocal && saveRes.error && !this.state.isPreviewMode ? 'error' : 'success'
+    );
+  },
+
+  cancelExcelImport() {
+    this.state.pendingImport = null;
+    this.resetExcelImportPreview();
+  },
+
+  resetExcelImportPreview() {
+    const preview = document.getElementById('excelImportPreview');
+    const confirmButton = document.getElementById('btnConfirmExcelImport');
+    const cancelButton = document.getElementById('btnCancelExcelImport');
+    if (preview) {
+      preview.innerHTML = '';
+      preview.classList.add('view-hidden');
+    }
+    if (confirmButton) confirmButton.classList.add('view-hidden');
+    if (cancelButton) cancelButton.classList.add('view-hidden');
   },
 
   /**
@@ -942,9 +1106,11 @@ const App = {
       return;
     }
 
-    const newTask = {
-      id: 'task-' + Date.now(),
-      scheduleId: this.state.scheduleId,
+    const editingTask = this.state.tasks.find(task => task.id === this.state.editingTaskId);
+    const task = {
+      ...(editingTask || {}),
+      id: editingTask?.id || `task-${Date.now()}`,
+      scheduleId: this.state.scheduleId || editingTask?.scheduleId || null,
       title: title,
       category: category,
       priority: priority,
@@ -953,49 +1119,104 @@ const App = {
       restBetweenMinutes: restBetweenMinutes,
       timePreference: timePreference,
       preferredDays: checkedDays,
-      status: 'scheduled',
-      createdAt: new Date().toISOString()
+      status: 'pending',
+      createdAt: editingTask?.createdAt || new Date().toISOString()
     };
 
     const currentOccupied = [
       ...this.state.baseBlocks,
-      ...this.state.taskBlocks,
-      ...this.state.breakBlocks
+      ...this.state.taskBlocks.filter(block => block.taskId !== task.id),
+      ...this.state.breakBlocks.filter(block => block.taskId !== task.id)
     ];
 
-    const scheduleRes = SmartScheduler.scheduleTask(newTask, currentOccupied);
-
-    if (scheduleRes.placedBlocks.length === 0) {
-      this.showToast(scheduleRes.message, 'error');
-      return;
-    }
-
-    this.state.tasks.push(newTask);
-    this.state.taskBlocks.push(...scheduleRes.placedBlocks);
-    this.state.breakBlocks.push(...scheduleRes.breakBlocks);
+    const scheduleRes = SmartScheduler.scheduleTask(task, currentOccupied);
+    task.status = scheduleRes.success ? 'scheduled' : 'pending';
+    this.state.tasks = editingTask
+      ? this.state.tasks.map(existing => existing.id === task.id ? task : existing)
+      : [...this.state.tasks, task];
+    this.state.taskBlocks = currentOccupied.filter(block => block.type === 'study' || block.type === 'task')
+      .concat(scheduleRes.placedBlocks);
+    this.state.breakBlocks = currentOccupied.filter(block => block.type === 'break')
+      .concat(scheduleRes.breakBlocks);
 
     // Solo guardar en Supabase/Local si NO es preview
+    let saveRes = { isLocal: false, task };
     if (!this.state.isPreviewMode) {
-      await SupabaseService.saveTask(newTask);
+      saveRes = await SupabaseService.saveTask(task);
+      if (saveRes.task?.id && saveRes.task.id !== task.id) {
+        const temporaryId = task.id;
+        task.id = saveRes.task.id;
+        [...this.state.taskBlocks, ...this.state.breakBlocks]
+          .filter(block => block.taskId === temporaryId)
+          .forEach(block => { block.taskId = task.id; });
+      }
+      this.setStorageStatus(saveRes.isLocal ? 'local' : 'cloud');
     }
 
     this.updateCalendar();
     this.renderTaskCards();
     this.updateStats();
 
-    document.getElementById('taskTitle').value = '';
+    document.getElementById('taskForm').reset();
+    this.state.editingTaskId = null;
+    document.getElementById('taskModalTitle').textContent = '⚡ Organizar Tarea / Tiempo de Estudio';
+    document.getElementById('btnSubmitTask').textContent = '⚡ Organizar Automáticamente';
     this.closeModal('taskModal');
 
-    if (scheduleRes.success) {
+    if (this.state.isPreviewMode && scheduleRes.success) {
+      this.showToast(scheduleRes.message, 'success');
+    } else if (this.state.isPreviewMode) {
+      this.showToast(scheduleRes.message, 'info');
+    } else if (saveRes.isLocal) {
+      this.showToast(
+        saveRes.error
+          ? 'Tarea guardada solo en este dispositivo; no se pudo sincronizar.'
+          : 'Tarea guardada en este dispositivo.',
+        saveRes.error ? 'error' : 'info'
+      );
+    } else if (scheduleRes.success) {
       this.showToast(scheduleRes.message, 'success');
     } else {
       this.showToast(scheduleRes.message, 'info');
     }
   },
 
+  openTaskModal(task = null) {
+    const form = document.getElementById('taskForm');
+    if (form) form.reset();
+
+    this.state.editingTaskId = task?.id || null;
+    const title = document.getElementById('taskModalTitle');
+    const submit = document.getElementById('btnSubmitTask');
+    if (task) {
+      document.getElementById('taskTitle').value = task.title;
+      document.getElementById('taskCategory').value = task.category || 'estudio';
+      document.getElementById('taskPriority').value = task.priority || 'medium';
+      document.getElementById('taskDurationHours').value = Math.floor(task.durationMinutes / 60);
+      document.getElementById('taskDurationMinutes').value = task.durationMinutes % 60;
+      document.getElementById('taskMaxSession').value = String(task.maxSessionMinutes || 60);
+      document.getElementById('taskRestBetween').value = String(task.restBetweenMinutes || 0);
+      document.getElementById('taskTimePreference').value = task.timePreference || 'any';
+      document.querySelectorAll('input[name="prefDays"]').forEach(input => {
+        input.checked = (task.preferredDays || []).includes(input.value);
+      });
+      if (title) title.textContent = 'Editar tarea';
+      if (submit) submit.textContent = 'Guardar cambios y reorganizar';
+    } else {
+      document.querySelectorAll('input[name="prefDays"]').forEach(input => {
+        input.checked = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].includes(input.value);
+      });
+      if (title) title.textContent = '⚡ Organizar Tarea / Tiempo de Estudio';
+      if (submit) submit.textContent = '⚡ Organizar Automáticamente';
+    }
+
+    this.openModal('taskModal');
+  },
+
   openNewTaskModalWithSlot(day, hour) {
+    this.openTaskModal();
     document.querySelectorAll('input[name="prefDays"]').forEach(cb => {
-      cb.checked = (cb.value === day);
+      cb.checked = cb.value === day;
     });
 
     const prefSelect = document.getElementById('taskTimePreference');
@@ -1006,45 +1227,79 @@ const App = {
       else prefSelect.value = 'any';
     }
 
-    this.openModal('taskModal');
   },
 
-  reorganizeAllTasks(showToastFeedback = true) {
-    if (this.state.tasks.length === 0) {
+  async reorganizeAllTasks(showToastFeedback = true) {
+    const openTasks = this.state.tasks.filter(task => task.status !== 'completed');
+    if (openTasks.length === 0) {
       if (showToastFeedback) this.showToast('No hay tareas registradas para organizar', 'info');
       return;
     }
 
-    const result = SmartScheduler.reorganizeAll(this.state.tasks, this.state.baseBlocks);
+    const result = SmartScheduler.reorganizeAll(openTasks, this.state.baseBlocks);
     this.state.taskBlocks = result.taskBlocks;
     this.state.breakBlocks = result.breakBlocks;
+    const statuses = new Map(result.report.map(item => [item.taskId, item.success ? 'scheduled' : 'pending']));
+    this.state.tasks = this.state.tasks.map(task => ({
+      ...task,
+      status: task.status === 'completed' ? task.status : (statuses.get(task.id) || 'pending')
+    }));
+
+    if (!this.state.isPreviewMode) {
+      const tasksToSave = this.state.tasks.filter(task => task.status !== 'completed');
+      const saveResults = await Promise.all(tasksToSave.map(task => SupabaseService.saveTask(task)));
+      saveResults.forEach((save, index) => {
+        const task = tasksToSave[index];
+        if (!save.task?.id || save.task.id === task.id) return;
+        const oldId = task.id;
+        task.id = save.task.id;
+        [...this.state.taskBlocks, ...this.state.breakBlocks]
+          .filter(block => block.taskId === oldId)
+          .forEach(block => { block.taskId = task.id; });
+      });
+      if (saveResults.some(save => save.isLocal)) this.setStorageStatus('local');
+      else if (saveResults.length) this.setStorageStatus('cloud');
+    }
 
     this.updateCalendar();
+    this.renderTaskCards();
     this.updateStats();
 
     if (showToastFeedback) {
-      this.showToast('¡Horario y tareas re-organizados con éxito!', 'success');
+      const incomplete = result.report.filter(item => !item.success);
+      if (incomplete.length) {
+        const remaining = incomplete.reduce((total, item) => total + item.unplacedMinutes, 0);
+        this.showToast(`Reorganización parcial: ${remaining} min pendientes en ${incomplete.length} tarea(s). Revisa “Mis tareas”.`, 'info');
+      } else {
+        this.showToast('Horario y tareas reorganizados con éxito.', 'success');
+      }
     }
   },
 
-  clearScheduledTasks() {
+  async clearScheduledTasks() {
     if (this.state.taskBlocks.length === 0 && this.state.tasks.length === 0) {
       this.showToast('El calendario ya está limpio', 'info');
       return;
     }
 
     if (confirm('¿Deseas vaciar las tareas y descansos programados? El horario base de Excel se mantendrá.')) {
-      this.state.taskBlocks = [];
-      this.state.breakBlocks = [];
-      this.state.tasks = [];
+      let failedIds = [];
       if (!this.state.isPreviewMode) {
-        localStorage.removeItem('cronosys_tasks');
+        const results = await Promise.all(this.state.tasks.map(task => SupabaseService.deleteTask(task.id)));
+        failedIds = this.state.tasks.filter((task, index) => !results[index].success).map(task => task.id);
       }
+      this.state.tasks = this.state.tasks.filter(task => failedIds.includes(task.id));
+      this.state.taskBlocks = this.state.taskBlocks.filter(block => failedIds.includes(block.taskId));
+      this.state.breakBlocks = this.state.breakBlocks.filter(block => failedIds.includes(block.taskId));
 
       this.updateCalendar();
       this.renderTaskCards();
       this.updateStats();
-      this.showToast('Tareas y descansos eliminados', 'info');
+      if (failedIds.length) {
+        this.showToast(`No se pudieron eliminar ${failedIds.length} tarea(s) de la nube. Siguen en la lista.`, 'error');
+      } else {
+        this.showToast('Tareas y descansos eliminados', 'info');
+      }
     }
   },
 
@@ -1114,6 +1369,12 @@ const App = {
     const container = document.getElementById('taskCardsGrid');
     if (!container) return;
 
+    const filter = document.getElementById('taskStatusFilter')?.value || 'all';
+    const visibleTasks = this.state.tasks.filter(task =>
+      filter === 'all' ||
+      (filter === 'completed' ? task.status === 'completed' : task.status !== 'completed')
+    );
+
     if (this.state.tasks.length === 0) {
       container.innerHTML = `
         <div class="empty-state-card">
@@ -1134,82 +1395,126 @@ const App = {
       `;
 
       const btn = document.getElementById('btnEmptyStateAddCard');
-      if (btn) btn.addEventListener('click', () => this.openModal('taskModal'));
+      if (btn) btn.addEventListener('click', () => this.openTaskModal());
+      return;
+    }
+
+    if (visibleTasks.length === 0) {
+      container.innerHTML = '<p class="task-filter-empty">No hay tareas en este filtro.</p>';
       return;
     }
 
     let html = '';
-    this.state.tasks.forEach(task => {
+    visibleTasks.forEach(task => {
       const hours = Math.floor(task.durationMinutes / 60);
       const mins = task.durationMinutes % 60;
       const durationStr = `${hours > 0 ? hours + 'h ' : ''}${mins > 0 ? mins + 'm' : ''}`.trim();
-
       const daysStr = (task.preferredDays || []).map(d => d.substring(0, 3).toUpperCase()).join(', ');
-
+      const placedMinutes = this.state.taskBlocks
+        .filter(block => block.taskId === task.id)
+        .reduce((total, block) => {
+          const start = CalendarView.timeToMinutes(block.startTime);
+          let end = CalendarView.timeToMinutes(block.endTime);
+          if (end <= start) end = 1440;
+          return total + end - start;
+        }, 0);
+      const remainingMinutes = Math.max(0, task.durationMinutes - placedMinutes);
+      const statusText = task.status === 'completed'
+        ? 'Completada'
+        : remainingMinutes > 0
+          ? `Pendiente de encajar ${remainingMinutes} min`
+          : 'Programada';
+      const categoryLabels = {
+        estudio: 'Estudio',
+        tarea: 'Tarea',
+        proyecto: 'Proyecto',
+        personal: 'Personal'
+      };
+      const category = ['estudio', 'tarea', 'proyecto', 'personal'].includes(task.category)
+        ? task.category
+        : 'estudio';
       html += `
-        <div class="task-item-card" data-id="${task.id}">
+        <article class="task-item-card ${task.status === 'completed' ? 'is-completed' : ''}" data-id="${this.escapeHtml(task.id)}">
           <div class="task-item-header">
-            <span class="task-item-title">${task.title}</span>
-            <span class="task-category-pill ${task.category || 'estudio'}">${task.category || 'Estudio'}</span>
+            <h3 class="task-item-title">${this.escapeHtml(task.title)}</h3>
+            <span class="task-category-pill ${category}">${categoryLabels[category]}</span>
           </div>
 
           <div class="task-item-details">
             <div class="task-meta-row">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <polyline points="12 6 12 12 16 14"></polyline>
-              </svg>
-              <span>Tiempo total: <strong>${durationStr}</strong> (en bloques de ${task.maxSessionMinutes || 60}m)</span>
+              <span>Tiempo total: <strong>${this.escapeHtml(durationStr)}</strong> (sesiones de ${Number(task.maxSessionMinutes) || 60} min)</span>
             </div>
-
             <div class="task-meta-row">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="16" y1="2" x2="16" y2="6"></line>
-                <line x1="8" y1="2" x2="8" y2="6"></line>
-              </svg>
-              <span>Días: <strong>${daysStr}</strong></span>
+              <span>Días preferidos: <strong>${this.escapeHtml(daysStr || 'Sin días')}</strong></span>
             </div>
-
             <div class="task-meta-row">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
-                <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
-              </svg>
-              <span>Descanso: <strong>${task.restBetweenMinutes || 0} min</strong></span>
+              <span>Descanso: <strong>${Number(task.restBetweenMinutes) || 0} min</strong></span>
             </div>
           </div>
 
           <div class="task-item-actions">
-            <span style="font-size: 0.75rem; color: #16a34a; font-weight: 700;">● Programada</span>
-            <button class="btn btn-secondary btn-delete-task" data-task-id="${task.id}" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; color: #dc2626;">
-              Eliminar
-            </button>
+            <span class="task-status ${task.status === 'completed' ? 'completed' : remainingMinutes > 0 ? 'pending' : 'scheduled'}">${statusText}</span>
+            <div class="task-action-buttons">
+              <button class="btn btn-secondary" type="button" aria-label="Editar ${this.escapeHtml(task.title)}" data-task-action="edit" data-task-id="${this.escapeHtml(task.id)}">Editar</button>
+              <button class="btn btn-secondary" type="button" aria-label="${task.status === 'completed' ? 'Reabrir' : 'Completar'} ${this.escapeHtml(task.title)}" data-task-action="${task.status === 'completed' ? 'reopen' : 'complete'}" data-task-id="${this.escapeHtml(task.id)}">
+                ${task.status === 'completed' ? 'Reabrir' : 'Completar'}
+              </button>
+              <button class="btn btn-secondary btn-delete-task" type="button" data-task-action="delete" data-task-id="${this.escapeHtml(task.id)}">Eliminar</button>
+            </div>
           </div>
-        </div>
+        </article>
       `;
     });
 
     container.innerHTML = html;
+  },
 
-    container.querySelectorAll('.btn-delete-task').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const taskId = btn.getAttribute('data-task-id');
-        this.deleteTask(taskId);
-      });
-    });
+  async setTaskCompleted(taskId, completed) {
+    const task = this.state.tasks.find(item => item.id === taskId);
+    if (!task) return;
+
+    task.status = completed ? 'completed' : 'pending';
+    let localFallback = false;
+    let syncFailed = false;
+    if (completed) {
+      this.state.taskBlocks = this.state.taskBlocks.filter(block => block.taskId !== taskId);
+      this.state.breakBlocks = this.state.breakBlocks.filter(block => block.taskId !== taskId);
+      if (!this.state.isPreviewMode) {
+        const save = await SupabaseService.saveTask(task);
+        if (save.task?.id) task.id = save.task.id;
+        localFallback = save.isLocal;
+        syncFailed = !!save.error;
+        this.setStorageStatus(save.isLocal ? 'local' : 'cloud');
+      }
+    } else {
+      await this.reorganizeAllTasks(false);
+    }
+
+    this.updateCalendar();
+    this.renderTaskCards();
+    this.updateStats();
+    this.showToast(
+      localFallback
+        ? syncFailed
+          ? 'Tarea completada. El cambio quedó solo en este dispositivo porque falló la sincronización.'
+          : 'Tarea completada en este dispositivo.'
+        : completed ? 'Tarea marcada como completada.' : 'Tarea reabierta.',
+      syncFailed ? 'error' : localFallback ? 'info' : 'success'
+    );
   },
 
   async deleteTask(taskId) {
-    this.state.tasks = this.state.tasks.filter(t => t.id !== taskId);
-    this.state.taskBlocks = this.state.taskBlocks.filter(b => b.taskId !== taskId);
-    this.state.breakBlocks = this.state.breakBlocks.filter(b => b.taskId !== taskId);
-
     if (!this.state.isPreviewMode) {
-      await SupabaseService.deleteTask(taskId);
+      const result = await SupabaseService.deleteTask(taskId);
+      if (!result.success) {
+        this.showToast('No se pudo borrar la tarea de la nube; sigue en tu lista.', 'error');
+        return;
+      }
     }
 
+    this.state.tasks = this.state.tasks.filter(task => task.id !== taskId);
+    this.state.taskBlocks = this.state.taskBlocks.filter(block => block.taskId !== taskId);
+    this.state.breakBlocks = this.state.breakBlocks.filter(block => block.taskId !== taskId);
     this.updateCalendar();
     this.renderTaskCards();
     this.updateStats();
@@ -1244,6 +1549,18 @@ const App = {
   },
 
   async loadInitialData() {
+    this.state.scheduleId = null;
+    this.state.fileName = null;
+    this.state.baseBlocks = [];
+    this.state.taskBlocks = [];
+    this.state.breakBlocks = [];
+    this.state.tasks = [];
+    const badge = document.getElementById('scheduleFileBadge');
+    if (badge) {
+      badge.textContent = 'Sin archivo cargado';
+      badge.removeAttribute('style');
+    }
+
     const schedRes = await SupabaseService.loadActiveSchedule();
     if (schedRes.success && schedRes.data) {
       this.state.scheduleId = schedRes.data.id;
@@ -1262,10 +1579,11 @@ const App = {
     if (taskRes.success && taskRes.tasks) {
       this.state.tasks = taskRes.tasks;
       if (this.state.tasks.length > 0) {
-        this.reorganizeAllTasks(false);
+        await this.reorganizeAllTasks(false);
       }
     }
 
+    this.setStorageStatus(schedRes.isLocal || taskRes?.isLocal ? 'local' : 'cloud');
     this.updateCalendar();
     this.renderTaskCards();
     this.updateStats();
@@ -1335,12 +1653,69 @@ const App = {
 
   openModal(modalId) {
     const modal = document.getElementById(modalId);
-    if (modal) modal.classList.add('active');
+    if (!modal) return;
+    this.state.modalTrigger = document.activeElement;
+    this.state.activeModalId = modalId;
+    const dialog = modal.querySelector('.modal-container');
+    const title = modal.querySelector('.modal-title');
+    if (dialog) {
+      dialog.setAttribute('role', 'dialog');
+      dialog.setAttribute('aria-modal', 'true');
+      dialog.setAttribute('aria-label', title?.textContent?.trim() || 'Diálogo');
+      dialog.setAttribute('tabindex', '-1');
+    }
+    modal.classList.add('active');
+    const firstFocusable = modal.querySelector(
+      'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href]'
+    );
+    (firstFocusable || dialog)?.focus();
   },
 
   closeModal(modalId) {
     const modal = document.getElementById(modalId);
-    if (modal) modal.classList.remove('active');
+    if (!modal) return;
+    modal.classList.remove('active');
+    if (modalId === 'taskModal') {
+      this.state.editingTaskId = null;
+      const title = document.getElementById('taskModalTitle');
+      const submit = document.getElementById('btnSubmitTask');
+      if (title) title.textContent = '⚡ Organizar Tarea / Tiempo de Estudio';
+      if (submit) submit.textContent = '⚡ Organizar Automáticamente';
+    }
+    if (modalId === 'uploadModal' && this.state.pendingImport) this.cancelExcelImport();
+    if (this.state.activeModalId === modalId) {
+      this.state.activeModalId = null;
+      if (this.state.modalTrigger?.isConnected) this.state.modalTrigger.focus();
+      else if (modalId === 'taskModal') document.getElementById('btnQuickAddTask')?.focus();
+      else document.getElementById('btnOpenTaskModal')?.focus();
+      this.state.modalTrigger = null;
+    }
+  },
+
+  escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    })[char]);
+  },
+
+  setStorageStatus(mode) {
+    const status = document.getElementById('storageStatus');
+    if (!status) return;
+    if (mode === 'cloud' &&
+        (SupabaseService.getLocalTasks().length > 0 || localStorage.getItem('cronosys_schedule'))) {
+      mode = 'local';
+    }
+    const labels = {
+      cloud: 'Sincronizado en la nube',
+      local: 'Solo en este dispositivo',
+      preview: 'Demo: no se guardan cambios'
+    };
+    status.textContent = labels[mode] || 'Aún no guardado';
+    status.dataset.mode = mode;
   },
 
   showToast(message, type = 'info') {
@@ -1376,7 +1751,10 @@ const App = {
       `;
     }
 
-    toast.innerHTML = `${iconSvg}<span>${message}</span>`;
+    toast.innerHTML = iconSvg;
+    const text = document.createElement('span');
+    text.textContent = message;
+    toast.appendChild(text);
     container.appendChild(toast);
 
     setTimeout(() => {

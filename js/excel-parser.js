@@ -40,7 +40,7 @@ const ExcelParser = {
     if (!this.isValidExtension(file.name)) {
       return {
         valid: false,
-        error: 'formato no valido'
+        error: 'Formato no compatible. Sube un archivo .xlsx o .xls.'
       };
     }
 
@@ -53,7 +53,7 @@ const ExcelParser = {
 
       const workbook = XLSX.read(data, { type: 'array' });
       if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
-        return { valid: false, error: 'formato no valido' };
+        return { valid: false, error: 'El archivo no contiene ninguna hoja de cálculo.' };
       }
 
       const firstSheetName = workbook.SheetNames[0];
@@ -67,22 +67,25 @@ const ExcelParser = {
       });
 
       if (!rawRows || rawRows.length < 2) {
-        return { valid: false, error: 'formato no valido' };
+        return { valid: false, error: 'La hoja está vacía o no contiene filas de horario.' };
       }
 
       // 2. Validar Cabeceras (Fila 0)
       const headerRow = rawRows[0];
       const validation = this.validateHeader(headerRow);
       if (!validation.valid) {
-        return { valid: false, error: 'formato no valido' };
+        return { valid: false, error: validation.error };
       }
 
       // 3. Validar y procesar filas de horas
       const rowsData = rawRows.slice(1);
-      const parseResult = this.extractScheduleBlocks(rowsData);
+      const parseResult = this.extractScheduleBlocks(rowsData, validation.columnIndexes);
 
       if (!parseResult.valid) {
-        return { valid: false, error: 'formato no valido' };
+        return { valid: false, error: parseResult.error };
+      }
+      if (parseResult.blocks.length === 0) {
+        return { valid: false, error: 'No se encontraron actividades en el horario. Rellena al menos una celda bajo un día.' };
       }
 
       return {
@@ -90,11 +93,12 @@ const ExcelParser = {
         fileName: file.name,
         blocks: parseResult.blocks,
         totalEntries: parseResult.blocks.length,
+        warnings: parseResult.warnings,
         rawRows: rowsData
       };
     } catch (err) {
       console.error('Error al procesar el archivo Excel:', err);
-      return { valid: false, error: 'formato no valido' };
+      return { valid: false, error: 'No se pudo leer el Excel. Comprueba que el archivo no esté dañado e inténtalo de nuevo.' };
     }
   },
 
@@ -104,25 +108,26 @@ const ExcelParser = {
    */
   validateHeader(headerRow) {
     if (!Array.isArray(headerRow) || headerRow.length < 8) {
-      return { valid: false };
+      return { valid: false, error: 'Faltan columnas. Se necesita una columna de hora y una por cada día de la semana.' };
     }
 
     const firstCol = this.normalizeText(headerRow[0]);
-    // Debe empezar por hora/dia o contener hora y dia
-    if (!firstCol.includes('hora') && !firstCol.includes('dia')) {
-      return { valid: false };
+    if (!firstCol.includes('hora') && !firstCol.includes('time')) {
+      return { valid: false, error: 'La primera columna debe indicar la hora (por ejemplo, “Hora” o “Hora/Día”).' };
     }
 
-    // Comprobar los 7 días en las columnas 1 a 7
-    for (let i = 0; i < 7; i++) {
-      const colValue = this.normalizeText(headerRow[i + 1]);
-      const expectedDay = this.EXPECTED_DAYS[i];
-      if (colValue !== expectedDay) {
-        return { valid: false };
+    const columnIndexes = {};
+    for (const day of this.EXPECTED_DAYS) {
+      const index = headerRow.findIndex((value, headerIndex) =>
+        headerIndex > 0 && this.normalizeText(value) === day
+      );
+      if (index < 0) {
+        return { valid: false, error: `No se encontró la columna “${day}”. Revisa los encabezados de los siete días.` };
       }
+      columnIndexes[day] = index;
     }
 
-    return { valid: true };
+    return { valid: true, columnIndexes };
   },
 
   /**
@@ -150,6 +155,7 @@ const ExcelParser = {
     if (ampmMatch) {
       let hours = parseInt(ampmMatch[1], 10);
       const minutes = parseInt(ampmMatch[2], 10);
+      if (hours < 1 || hours > 12 || minutes > 59) return null;
       const isPm = ampmMatch[4].toLowerCase() === 'pm';
       if (isPm && hours < 12) hours += 12;
       if (!isPm && hours === 12) hours = 0;
@@ -181,9 +187,10 @@ const ExcelParser = {
   /**
    * Extrae los bloques de horario de las filas
    */
-  extractScheduleBlocks(rows) {
+  extractScheduleBlocks(rows, columnIndexes = null) {
     const blocks = [];
-    const daysKeys = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+    const daysKeys = this.EXPECTED_DAYS;
+    const columns = columnIndexes || Object.fromEntries(daysKeys.map((day, index) => [day, index + 1]));
     let validHourCount = 0;
 
     for (let r = 0; r < rows.length; r++) {
@@ -194,9 +201,8 @@ const ExcelParser = {
       const startTime = this.normalizeTime(timeRaw);
 
       if (!startTime) {
-        // Si hay una fila vacía al final, la ignoramos; si está en medio y no tiene hora válida:
         if (r < 24 && String(timeRaw).trim() !== '') {
-          return { valid: false };
+          return { valid: false, error: `La fila ${r + 2} tiene una hora no válida (“${String(timeRaw).trim()}”). Usa HH:MM o HH:MM:SS.` };
         }
         continue;
       }
@@ -209,13 +215,13 @@ const ExcelParser = {
       const endTime = `${endH.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 
       // Recorrer los 7 días
-      for (let d = 0; d < 7; d++) {
-        const cellValue = row[d + 1];
+      for (const day of daysKeys) {
+        const cellValue = row[columns[day]];
         if (cellValue && String(cellValue).trim() !== '') {
           const title = String(cellValue).trim();
           blocks.push({
-            id: 'base-' + d + '-' + startTime,
-            day: daysKeys[d],
+            id: `base-${day}-${startTime}-${r}`,
+            day: day,
             startTime: startTime,
             endTime: endTime,
             title: title,
@@ -228,17 +234,37 @@ const ExcelParser = {
 
     // Si no contiene ninguna hora válida, no cumple la plantilla
     if (validHourCount === 0) {
-      return { valid: false };
+      return { valid: false, error: 'No se encontraron horas válidas. Añade filas con horas como 08:00 o 08:00:00.' };
     }
 
     // Opcional: fusionar horas continuas con el mismo nombre para que en Teams/Outlook
     // se vea un bloque unificado (ej. "Trabajo" de 09:00 a 14:00)
     const mergedBlocks = this.mergeConsecutiveBlocks(blocks);
+    const warnings = this.findScheduleWarnings(mergedBlocks);
 
     return {
       valid: true,
-      blocks: mergedBlocks
+      blocks: mergedBlocks,
+      warnings
     };
+  },
+
+  findScheduleWarnings(blocks) {
+    const warnings = [];
+    this.EXPECTED_DAYS.forEach(day => {
+      const dayBlocks = blocks
+        .filter(block => block.day === day)
+        .sort((a, b) => a.startTime.localeCompare(b.startTime));
+      let latestBlock = dayBlocks[0];
+      for (let i = 1; i < dayBlocks.length; i++) {
+        const currentBlock = dayBlocks[i];
+        if (currentBlock.startTime < latestBlock.endTime) {
+          warnings.push(`${day}: “${latestBlock.title}” se solapa con “${currentBlock.title}” (${currentBlock.startTime}).`);
+        }
+        if (currentBlock.endTime > latestBlock.endTime) latestBlock = currentBlock;
+      }
+    });
+    return warnings;
   },
 
   /**

@@ -18,6 +18,8 @@ const CalendarView = {
     domingo: 'Domingo'
   },
   onlyWorkdays: false,
+  mobileDayOnly: false,
+  selectedMobileDay: null,
 
   /**
    * Inicializa la vista de calendario
@@ -45,6 +47,31 @@ const CalendarView = {
     this.render();
   },
 
+  setMobileDayView(enabled) {
+    if (this.mobileDayOnly === enabled) return;
+    this.mobileDayOnly = enabled;
+    if (!this.selectedMobileDay) this.selectedMobileDay = this.getTodayKey();
+    this.render();
+  },
+
+  moveMobileDay(offset) {
+    const currentIndex = this.activeDays.indexOf(this.selectedMobileDay || this.getTodayKey());
+    const nextIndex = (currentIndex + offset + this.activeDays.length) % this.activeDays.length;
+    this.selectedMobileDay = this.activeDays[nextIndex];
+    this.render();
+    this.setupAutoScroll();
+  },
+
+  escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    })[char]);
+  },
+
   /**
    * Determina qué día de la semana es hoy (normalizado)
    */
@@ -69,11 +96,18 @@ const CalendarView = {
   render() {
     if (!this.container) return;
 
-    const visibleDays = this.onlyWorkdays
-      ? ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']
-      : this.activeDays;
-
     const todayKey = this.getTodayKey();
+    const visibleDays = this.mobileDayOnly
+      ? [this.selectedMobileDay || todayKey]
+      : this.onlyWorkdays
+        ? ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']
+        : this.activeDays;
+    const calendarTitle = document.getElementById('calendarTitle');
+    if (calendarTitle) {
+      calendarTitle.textContent = this.mobileDayOnly
+        ? `Horario · ${this.dayLabels[visibleDays[0]]}`
+        : 'Horario Semanal';
+    }
 
     let html = `
       <div class="teams-calendar-wrapper">
@@ -99,6 +133,12 @@ const CalendarView = {
 
     html += `
           </div>
+        </div>
+
+        <div class="mobile-calendar-navigation" aria-label="Navegar por los días">
+          <button type="button" data-mobile-day="-1" aria-label="Día anterior">&larr;</button>
+          <span>${this.dayLabels[visibleDays[0]]}</span>
+          <button type="button" data-mobile-day="1" aria-label="Día siguiente">&rarr;</button>
         </div>
 
         <!-- Cuerpo del calendario con scroll -->
@@ -135,7 +175,11 @@ const CalendarView = {
 
       for (let h = 0; h < 24; h++) {
         html += `
-          <div class="hour-slot" data-day="${day}" data-hour="${h}" style="height: ${this.hourHeight}px;" title="Clic para añadir evento a las ${h.toString().padStart(2, '0')}:00">
+          <div class="hour-slot" data-day="${day}" data-hour="${h}" role="button"
+               tabindex="${h === 8 && day === visibleDays[0] ? '0' : '-1'}"
+               aria-label="Añadir tarea ${this.dayLabels[day]} a las ${h.toString().padStart(2, '0')}:00"
+               style="height: ${this.hourHeight}px;"
+               title="Añadir tarea a las ${h.toString().padStart(2, '0')}:00">
             <div class="half-hour-line"></div>
           </div>
         `;
@@ -239,14 +283,16 @@ const CalendarView = {
            data-time="${block.startTime} - ${block.endTime}"
            data-type="${block.type}"
            data-day="${block.day}"
+           role="button"
+           aria-label="${this.escapeHtml(`${typeBadge}: ${block.title}, ${this.dayLabels[block.day]}, ${block.startTime} a ${block.endTime}`)}"
            tabindex="0">
         <div class="event-card-content">
           <div class="event-card-header">
             ${iconSvg}
-            <span class="event-title" title="${block.title}">${block.title}</span>
+            <span class="event-title" title="${this.escapeHtml(block.title)}">${this.escapeHtml(block.title)}</span>
           </div>
           <div class="event-time-range">${block.startTime} - ${block.endTime}</div>
-          ${block.notes ? `<div class="event-notes-snippet">${block.notes}</div>` : ''}
+          ${block.notes ? `<div class="event-notes-snippet">${this.escapeHtml(block.notes)}</div>` : ''}
         </div>
       </div>
     `;
@@ -258,25 +304,64 @@ const CalendarView = {
   attachEvents() {
     // Clic en bloque para ver detalle
     this.container.querySelectorAll('.calendar-event-card').forEach(el => {
-      el.addEventListener('click', (e) => {
-        e.stopPropagation();
+      const openDetails = (event) => {
+        event.stopPropagation();
         const blockId = el.getAttribute('data-id');
         const block = this.currentBlocks.find(b => b.id === blockId);
         if (block && window.App && typeof window.App.showBlockDetailModal === 'function') {
           window.App.showBlockDetailModal(block);
+        }
+      };
+      el.addEventListener('click', (e) => {
+        openDetails(e);
+      });
+      el.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          openDetails(event);
         }
       });
     });
 
     // Clic en celda vacía para crear evento rápido
     this.container.querySelectorAll('.hour-slot').forEach(el => {
-      el.addEventListener('click', () => {
+      const openTask = () => {
         const day = el.getAttribute('data-day');
         const hour = parseInt(el.getAttribute('data-hour'), 10);
         if (window.App && typeof window.App.openNewTaskModalWithSlot === 'function') {
           window.App.openNewTaskModalWithSlot(day, hour);
         }
+      };
+      el.addEventListener('click', openTask);
+      el.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          openTask();
+          return;
+        }
+        if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+        event.preventDefault();
+        const slots = [...this.container.querySelectorAll('.hour-slot')];
+        const currentDay = el.dataset.day;
+        const dayIndex = this.activeDays.indexOf(currentDay);
+        const hour = Number(el.dataset.hour);
+        let nextDay = currentDay;
+        let nextHour = hour;
+        if (event.key === 'ArrowUp') nextHour = Math.max(0, hour - 1);
+        if (event.key === 'ArrowDown') nextHour = Math.min(23, hour + 1);
+        if (event.key === 'ArrowLeft') nextDay = this.activeDays[Math.max(0, dayIndex - 1)];
+        if (event.key === 'ArrowRight') nextDay = this.activeDays[Math.min(this.activeDays.length - 1, dayIndex + 1)];
+        slots.forEach(slot => { slot.tabIndex = -1; });
+        const nextSlot = this.container.querySelector(`.hour-slot[data-day="${nextDay}"][data-hour="${nextHour}"]`);
+        if (nextSlot) {
+          nextSlot.tabIndex = 0;
+          nextSlot.focus();
+        }
       });
+    });
+
+    this.container.querySelectorAll('[data-mobile-day]').forEach(button => {
+      button.addEventListener('click', () => this.moveMobileDay(Number(button.dataset.mobileDay)));
     });
   },
 
@@ -287,8 +372,10 @@ const CalendarView = {
     setTimeout(() => {
       const scrollBox = document.getElementById('calendarScrollContainer');
       if (scrollBox) {
-        // Desplazar a las 08:00 (8 * hourHeight)
-        scrollBox.scrollTop = 7.5 * this.hourHeight;
+        const todayKey = this.getTodayKey();
+        const currentHour = this.selectedMobileDay === todayKey ? new Date().getHours() : 8;
+        const targetHour = this.mobileDayOnly ? Math.max(7, currentHour - 2) : 7.5;
+        scrollBox.scrollTop = targetHour * this.hourHeight;
       }
     }, 150);
   },

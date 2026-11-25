@@ -1,7 +1,7 @@
 // Service Worker para Crono-SYS (Compatible con PWABuilder)
 // Estrategia: Network-first con fallback a Cache y página offline
 
-const CACHE_NAME = 'crono-sys-pwa-v1';
+const CACHE_NAME = 'crono-sys-pwa-v2';
 const OFFLINE_URL = 'offline.html';
 
 const ASSETS_TO_CACHE = [

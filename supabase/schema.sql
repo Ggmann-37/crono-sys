@@ -34,7 +34,7 @@ create table if not exists public.tasks (
     user_id uuid not null references auth.users(id) on delete cascade,
     schedule_id uuid references public.schedules(id) on delete set null,
     title text not null,
-    category text default 'estudio' check (category in ('estudio', 'tarea', 'trabajo', 'personal')),
+    category text default 'estudio' check (category in ('estudio', 'tarea', 'proyecto', 'trabajo', 'personal')),
     duration_minutes integer not null default 60 check (duration_minutes > 0),
     preferred_days text[] default array['lunes','martes','miercoles','jueves','viernes'],
     time_preference text default 'any' check (time_preference in ('any', 'morning', 'afternoon', 'evening', 'custom')),

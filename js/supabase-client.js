@@ -265,6 +265,7 @@ const SupabaseService = {
         if (blockError) throw blockError;
       }
 
+      localStorage.removeItem('cronosys_schedule');
       return { success: true, schedule: scheduleData, isLocal: false };
     } catch (err) {
       console.warn('Error al guardar en Supabase, usando almacenamiento local:', err);
@@ -311,10 +312,17 @@ const SupabaseService = {
 
       if (schedErr) throw schedErr;
       if (!schedules || schedules.length === 0) {
-        return { success: true, data: null, isLocal: false };
+        const localSchedule = this.getLocalSchedule();
+        return { success: true, data: localSchedule, isLocal: !!localSchedule };
       }
 
       const activeSchedule = schedules[0];
+      const localSchedule = this.getLocalSchedule();
+      if (localSchedule && localSchedule.updatedAt &&
+          new Date(localSchedule.updatedAt) > new Date(activeSchedule.updated_at)) {
+        return { success: true, data: localSchedule, isLocal: true };
+      }
+      if (localSchedule) localStorage.removeItem('cronosys_schedule');
 
       // 2. Obtener bloques asociados
       const { data: blocks, error: blockErr } = await this.client
@@ -369,23 +377,17 @@ const SupabaseService = {
    */
   async saveTask(task) {
     if (!this.currentUser || !this.client) {
-      const tasks = this.getLocalTasks();
-      const index = tasks.findIndex(t => t.id === task.id);
-      if (index >= 0) {
-        tasks[index] = task;
-      } else {
-        tasks.push(task);
-      }
-      localStorage.setItem('cronosys_tasks', JSON.stringify(tasks));
+      this.upsertLocalTask(task);
       return { success: true, task, isLocal: true };
     }
 
     try {
       const userId = this.currentUser.id;
+      const isDatabaseId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(task.id || '');
       const { data, error } = await this.client
         .from('tasks')
         .upsert({
-          id: task.id.includes('local') ? undefined : task.id,
+          ...(isDatabaseId ? { id: task.id } : {}),
           user_id: userId,
           title: task.title,
           category: task.category,
@@ -403,13 +405,55 @@ const SupabaseService = {
         .single();
 
       if (error) throw error;
-      return { success: true, task: data, isLocal: false };
+      this.removeLocalTask(task.id);
+      return { success: true, task: this.formatTask(data), isLocal: false };
     } catch (err) {
       console.warn('Fallo en Supabase saveTask, guardando en local:', err);
-      const tasks = this.getLocalTasks();
-      tasks.push(task);
-      localStorage.setItem('cronosys_tasks', JSON.stringify(tasks));
+      this.upsertLocalTask(task);
       return { success: true, task, isLocal: true, error: err.message };
+    }
+  },
+
+  formatTask(task) {
+    return {
+      id: task.id,
+      title: task.title,
+      category: task.category,
+      durationMinutes: task.duration_minutes,
+      preferredDays: task.preferred_days,
+      timePreference: task.time_preference,
+      customStart: task.custom_start_time ? task.custom_start_time.substring(0, 5) : null,
+      customEnd: task.custom_end_time ? task.custom_end_time.substring(0, 5) : null,
+      maxSessionMinutes: task.max_session_minutes,
+      restBetweenMinutes: task.rest_between_minutes,
+      priority: task.priority,
+      status: task.status,
+      updatedAt: task.updated_at || null
+    };
+  },
+
+  upsertLocalTask(task) {
+    const tasks = this.getLocalTasks();
+    const storedTask = { ...task, updatedAt: new Date().toISOString() };
+    const index = tasks.findIndex(existing => existing.id === task.id);
+    if (index >= 0) tasks[index] = storedTask;
+    else tasks.push(storedTask);
+    localStorage.setItem('cronosys_tasks', JSON.stringify(tasks));
+  },
+
+  removeLocalTask(taskId) {
+    const tasks = this.getLocalTasks().filter(task => task.id !== taskId);
+    localStorage.setItem('cronosys_tasks', JSON.stringify(tasks));
+  },
+
+  getLocalSchedule() {
+    const raw = localStorage.getItem('cronosys_schedule');
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch (error) {
+      console.warn('No se pudo leer el horario local:', error);
+      return null;
     }
   },
 
@@ -430,22 +474,29 @@ const SupabaseService = {
 
       if (error) throw error;
 
-      const formatted = (data || []).map(t => ({
-        id: t.id,
-        title: t.title,
-        category: t.category,
-        durationMinutes: t.duration_minutes,
-        preferredDays: t.preferred_days,
-        timePreference: t.time_preference,
-        customStart: t.custom_start_time ? t.custom_start_time.substring(0, 5) : null,
-        customEnd: t.custom_end_time ? t.custom_end_time.substring(0, 5) : null,
-        maxSessionMinutes: t.max_session_minutes,
-        restBetweenMinutes: t.rest_between_minutes,
-        priority: t.priority,
-        status: t.status
-      }));
-
-      return { success: true, tasks: formatted, isLocal: false };
+      const formatted = (data || []).map(task => this.formatTask(task));
+      const localTasks = this.getLocalTasks();
+      let hasUnsyncedLocalTasks = false;
+      localTasks.forEach(localTask => {
+        const cloudTaskIndex = formatted.findIndex(task => task.id === localTask.id);
+        if (cloudTaskIndex < 0) {
+          formatted.push(localTask);
+          hasUnsyncedLocalTasks = true;
+        } else {
+          const cloudTask = formatted[cloudTaskIndex];
+          if (localTask.updatedAt && (!cloudTask.updatedAt || new Date(localTask.updatedAt) > new Date(cloudTask.updatedAt))) {
+            formatted[cloudTaskIndex] = localTask;
+            hasUnsyncedLocalTasks = true;
+          } else {
+            this.removeLocalTask(localTask.id);
+          }
+        }
+      });
+      return {
+        success: true,
+        tasks: formatted,
+        isLocal: hasUnsyncedLocalTasks
+      };
     } catch (err) {
       console.warn('Error al cargar tareas de Supabase:', err);
       return { success: true, tasks: this.getLocalTasks(), isLocal: true };
@@ -456,10 +507,14 @@ const SupabaseService = {
    * Elimina una tarea
    */
   async deleteTask(taskId) {
+    const isDatabaseId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(taskId || '');
+    if (!isDatabaseId) {
+      this.removeLocalTask(taskId);
+      return { success: true };
+    }
+
     if (!this.currentUser || !this.client) {
-      let tasks = this.getLocalTasks();
-      tasks = tasks.filter(t => t.id !== taskId);
-      localStorage.setItem('cronosys_tasks', JSON.stringify(tasks));
+      this.removeLocalTask(taskId);
       return { success: true };
     }
 
@@ -471,6 +526,7 @@ const SupabaseService = {
         .eq('user_id', this.currentUser.id);
 
       if (error) throw error;
+      this.removeLocalTask(taskId);
       return { success: true };
     } catch (err) {
       console.error('Error al borrar tarea en Supabase:', err);

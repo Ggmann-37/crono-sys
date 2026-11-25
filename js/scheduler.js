@@ -179,7 +179,8 @@ const SmartScheduler = {
 
     for (let c = 0; c < sessionChunks.length; c++) {
       const chunkDuration = sessionChunks[c];
-      const requiredSpan = chunkDuration + restBetweenMin;
+      const breakDuration = c < sessionChunks.length - 1 ? restBetweenMin : 0;
+      const requiredSpan = chunkDuration + breakDuration;
       let placed = false;
 
       // Intentar ubicar en los días preferidos dando vueltas
@@ -191,7 +192,7 @@ const SmartScheduler = {
         // Buscar el primer intervalo libre donde quepa la sesión (+ descanso opcional)
         for (let i = 0; i < freeIntervals.length; i++) {
           const interval = freeIntervals[i];
-          if (interval.duration >= chunkDuration) {
+          if (interval.duration >= requiredSpan) {
             // Ubicar la sesión de estudio/tarea
             const sessionStartMin = interval.start;
             const sessionEndMin = sessionStartMin + chunkDuration;
@@ -221,14 +222,14 @@ const SmartScheduler = {
             });
 
             // Si hay descanso configurado y cabe después de la sesión
-            if (restBetweenMin > 0 && sessionEndMin + restBetweenMin <= rangeEndMin) {
+            if (breakDuration > 0) {
               const breakBlock = {
                 id: 'break-' + task.id + '-' + c + '-' + Date.now(),
                 taskId: task.id,
                 day: day,
                 startTime: this.minutesToTime(sessionEndMin),
-                endTime: this.minutesToTime(sessionEndMin + restBetweenMin),
-                title: `Descanso (${restBetweenMin}m)`,
+                endTime: this.minutesToTime(sessionEndMin + breakDuration),
+                title: `Descanso (${breakDuration}m)`,
                 type: 'break',
                 color: '#10b981', // Verde menta
                 notes: 'Pausa para recuperar foco y desconectar'
@@ -238,7 +239,7 @@ const SmartScheduler = {
               // Registrar el descanso en el mapa de ocupación para no meter otra tarea encima
               occupiedMap[day].push({
                 start: sessionEndMin,
-                end: sessionEndMin + restBetweenMin,
+                end: sessionEndMin + breakDuration,
                 title: breakBlock.title,
                 type: 'break'
               });
